@@ -17,10 +17,13 @@ const Ads = (() => {
   const APPLIXIR_SDK = 'https://cdn.applixir.com/applixir.app.v6.1.0.js';
   const AD_SLOT_ID = 'ad-slot';
 
+  /* ★ 硬编码广告配置：前端直接使用，不依赖后端 /api/config
+   * 注意：纯静态部署时 MockAPI.getPublicConfig() 只会返回 mock，
+   * 因此这里把 AppLixir 广告位写死，线上才能真实展示激励视频。 */
   const DEFAULT_CONFIG = {
-    provider: 'mock',
+    provider: 'applixir',
     scriptUrl: '',
-    adUnitId: '',
+    adUnitId: '5a4db0c5-0000-4000-8000-5a4db0c50001',
     rewardDays: 3,
     dailyLimit: 3,
     rewardSeconds: 5,
@@ -52,7 +55,10 @@ const Ads = (() => {
     initPromise = (async () => {
       try {
         const fromServer = await MockAPI.getPublicConfig();
-        config = { ...DEFAULT_CONFIG, ...(fromServer || {}) };
+        // ★ 只有服务端明确下发了非 mock 的广告平台时才覆盖硬编码配置
+        if (fromServer && fromServer.provider && String(fromServer.provider).toLowerCase() !== 'mock') {
+          config = { ...DEFAULT_CONFIG, ...fromServer };
+        }
       } catch (err) {
         config = { ...DEFAULT_CONFIG };
       }

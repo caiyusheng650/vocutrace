@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 词溯品牌色（与网页版 brand 系列一致） -->
+    <color name="colorPrimary">#158a7c</color>
+    <color name="colorPrimaryDark">#0f6b60</color>
+    <color name="colorAccent">#22ab98</color>
+</resources>

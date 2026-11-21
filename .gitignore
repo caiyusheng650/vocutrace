@@ -1,3 +1,26 @@
 .screenshots
 ECDICT-master.zip
 .trae-html-share-packages/
+node_modules/
+www/
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+.gradle-home/
+*.apk
+*.aab
+
+# 本机 Android 模拟器数据（AVD 镜像，体积很大）
+.android/
+# 本地工具与日志
+.trae/
+*.log
+# 系统文件
+.DS_Store
+Thumbs.db
+# 本地密钥与证书
+*.jks
+*.keystore
+.env
+.env.*

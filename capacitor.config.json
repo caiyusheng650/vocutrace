@@ -1,0 +1,11 @@
+{
+  "appId": "com.vocutrace.app",
+  "appName": "词溯",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

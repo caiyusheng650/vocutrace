@@ -55,19 +55,43 @@ const MockAPI = (() => {
 
   function resolveApiBase() {
     let base = '';
+    let forcedMock = false;
     try {
       const params = new URLSearchParams(location.search);
       const fromQuery = params.get('api');
       if (fromQuery !== null) {
         const v = normalizeBase(fromQuery);
-        if (!v || v === 'mock' || v === 'off') localStorage.removeItem(API_BASE_KEY);
-        else localStorage.setItem(API_BASE_KEY, v);
+        if (!v || v === 'mock' || v === 'off') {
+          localStorage.removeItem(API_BASE_KEY);
+          forcedMock = true;
+        } else {
+          localStorage.setItem(API_BASE_KEY, v);
+        }
       }
       base = normalizeBase(localStorage.getItem(API_BASE_KEY));
     } catch (err) {
       base = '';
     }
+    // ★ APK / 原生壳：由 js/app-env.js 注入后端地址（?api=mock 可强制本地模式）
+    if (!forcedMock && !base) {
+      try {
+        const injected = normalizeBase(window.CISHUO_API_BASE);
+        if (injected) base = injected;
+      } catch (err) {
+        /* 忽略 */
+      }
+    }
     if (base) return base;
+    // ★ Capacitor 原生壳里的 localhost 是 WebView 自身，不是开发服务器。
+    //   未注入后端地址时直接走本地存储，避免误请求 127.0.0.1:8787 报连接失败。
+    try {
+      const cap = window.Capacitor;
+      if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) {
+        return '';
+      }
+    } catch (err) {
+      /* 忽略 */
+    }
     try {
       const host = location.hostname;
       if (host === 'localhost' || host === '127.0.0.1') return DEFAULT_LOCAL_BASE;
