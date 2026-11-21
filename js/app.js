@@ -27,8 +27,6 @@ const state = {
   authBusy: false,
   codeTimer: null,
   clozeAnswers: [], // ★ 完形填空：每个下拉框当前选择
-  adTimer: null,    // ★ 广告奖励：mock 倒计时定时器
-  adSecondsLeft: 0, // ★ 广告奖励：剩余秒数
   wordPage: 1,      // ★ 词书列表：当前页（大词库分页用）
   wordSearch: '',   // ★ 词书列表：搜索关键词
   wordPageSize: 80, // ★ 词书列表：每页渲染数量，避免上千词卡顿
@@ -51,11 +49,11 @@ const els = {
   // 账号
   guestHint: $('guest-hint'),
   logoutModal: $('logout-modal'),
-  loginPhone: $('login-phone'),
+  loginEmail: $('login-email'),
   loginCode: $('login-code'),
   loginError: $('login-error'),
   btnSendCode: $('btn-send-code'),
-  btnPhoneLogin: $('btn-phone-login'),
+  btnEmailLogin: $('btn-email-login'),
   meAccount: $('me-account'),
 
   // 引导
@@ -173,7 +171,7 @@ const els = {
   btnOpenVip: $('btn-open-vip'),
   vipModal: $('vip-modal'),
   vipClose: $('vip-close'),
-  btnActivateVip: $('btn-activate-vip'),
+  btnVipReward: $('btn-vip-reward'),
   accountMenu: $('account-menu'),
   accountIdentity: $('account-identity'),
   accountExpire: $('account-expire'),
@@ -189,6 +187,7 @@ const els = {
   adTip: $('ad-tip'),
   adClaim: $('ad-claim'),
   adClose: $('ad-close'),
+  adSlot: $('ad-slot'),
   quizRecoLabel: $('quiz-reco-label'),
   kcRadarMember: $('kc-radar-member'),
   kcRadarLocked: $('kc-radar-locked'),
@@ -216,10 +215,14 @@ function levelName(id) {
   return l ? l.name : id;
 }
 
-/* 手机号脱敏展示：138****8000 */
-function maskPhone(phone) {
-  const p = String(phone || '');
-  return p.length === 11 ? `${p.slice(0, 3)}****${p.slice(7)}` : '未绑定手机号';
+/* 邮箱脱敏展示：ab***@example.com */
+function maskEmail(email) {
+  const value = String(email || '');
+  const at = value.indexOf('@');
+  if (at <= 0) return value || '未绑定邮箱';
+  const name = value.slice(0, at);
+  const visible = name.slice(0, Math.min(2, name.length));
+  return `${visible}***${value.slice(at)}`;
 }
 
 function greeting() {
@@ -260,7 +263,7 @@ function showView(name) {
 }
 
 /* ============================================================
- * 账号体系：游客 / 手机号验证码 / 微信（只处理登录态与同步）
+ * 账号体系：游客 / 邮箱验证码（只处理登录态与同步）
  * ------------------------------------------------------------
  * 做题、出题、错题、统计逻辑均不在此改动。
  * ============================================================ */
@@ -344,18 +347,18 @@ function showLoginError(msg) {
   els.loginError.classList.toggle('hidden', !msg);
 }
 
-/* 获取验证码：真实后端模式下由服务端下发，未配置后端时直接通过 */
+/* 获取邮箱验证码：配置 SMTP 时真实发信，否则回传验证码方便调试 */
 async function sendCode() {
-  const phone = els.loginPhone.value.trim();
-  if (!/^1\d{10}$/.test(phone)) {
-    showLoginError('请输入 11 位手机号');
+  const email = els.loginEmail.value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showLoginError('请输入正确的邮箱地址');
     return;
   }
   showLoginError('');
   els.btnSendCode.disabled = true;
   els.btnSendCode.textContent = '发送中…';
 
-  const res = await MockAPI.requestSmsCode(phone);
+  const res = await MockAPI.requestEmailCode(email);
   if (!res.ok) {
     els.btnSendCode.disabled = false;
     els.btnSendCode.textContent = '获取验证码';
@@ -365,7 +368,7 @@ async function sendCode() {
 
   let left = 60;
   els.btnSendCode.textContent = `${left}s 后重发`;
-  toast('验证码已发送，请输入 6 位数字');
+  toast(res.devCode ? `验证码（开发环境）：${res.devCode}` : '验证码已发送到邮箱，请查收');
   clearInterval(state.codeTimer);
   state.codeTimer = setInterval(() => {
     left -= 1;
@@ -380,16 +383,16 @@ async function sendCode() {
   }, 1000);
 }
 
-/* 手机号验证码登录（含游客数据自动同步） */
-async function doPhoneLogin() {
+/* 邮箱验证码登录（含游客数据自动同步） */
+async function doEmailLogin() {
   if (state.authBusy) return;
   state.authBusy = true;
   try {
-    const phone = els.loginPhone.value.trim();
+    const email = els.loginEmail.value.trim().toLowerCase();
     const code = els.loginCode.value.trim();
     const local = captureLocalData();
 
-    const res = await MockAPI.loginByPhone(phone, code);
+    const res = await MockAPI.loginByEmail(email, code);
     if (!res.ok) {
       showLoginError(res.error || '登录失败');
       return;
@@ -398,27 +401,6 @@ async function doPhoneLogin() {
 
     // 游客升级：本机已有记录一并同步进账号
     // （真实后端模式下即使本机为空也要同步一次，才能拉回账号已有进度）
-    let syncInfo = null;
-    if (local.records.length || Object.keys(local.mastery).length || MockAPI.isRemote()) {
-      syncInfo = await MockAPI.syncLocalRecordToUser(local);
-    }
-    await afterAuth(res.user, syncInfo, res.isNew);
-  } finally {
-    state.authBusy = false;
-  }
-}
-
-/* 微信一键登录（mock；后续替换为微信 OAuth 授权回调） */
-async function doWechatLogin() {
-  if (state.authBusy) return;
-  state.authBusy = true;
-  try {
-    const local = captureLocalData();
-    const res = await MockAPI.loginByWechat();
-    if (!res.ok) {
-      toast(res.error || '微信登录失败');
-      return;
-    }
     let syncInfo = null;
     if (local.records.length || Object.keys(local.mastery).length || MockAPI.isRemote()) {
       syncInfo = await MockAPI.syncLocalRecordToUser(local);
@@ -464,15 +446,12 @@ async function doLogout(mode) {
   // ★ 会员绑定登录账号：降级为游客时同步清空会员标记，避免游客白嫖会员
   Store.saveUser({
     username: '游客',
-    phone: null,
-    wechat: false,
-    wechatOpenId: null,
+    email: null,
     guest: true,
     loggedIn: false,
     authMode: null,
     vip: false,
     vipExpireTime: null,
-    vipActivatedAt: null,
     vipLastRewardAt: null,
   });
   await refreshHome();
@@ -521,37 +500,19 @@ function closeVipModal() {
   els.vipModal.classList.remove('flex');
 }
 
-/* mock 开通会员：前端直接置 vip=true（+5 个月），后续替换为支付成功回调 */
-async function doActivateVip() {
+/* 会员弹窗入口：关闭介绍弹窗，直接进入广告奖励流程 */
+function doVipReward() {
   closeVipModal();
-  const user = Store.getUser() || {};
-  // ★ 会员绑定登录账号：游客点击开通先去登录，不发生任何会员变更
-  if (!user.loggedIn || user.guest) {
-    toast('会员需登录后开通');
-    openLogin();
-    return;
-  }
-  const res = await MockAPI.activateVip();
-  if (!res.ok) {
-    toast(res.reason || '开通失败，请稍后再试');
-    return;
-  }
-  toast(res.vipExpireTime
-    ? `已开通 AI 会员，有效期至 ${formatExpire(res.vipExpireTime)}`
-    : '已开通 AI 会员，精准复习已启用');
-  await refreshHome();
-  await renderMe();
-  updateRecoLabel();
+  startAdReward();
 }
 
 /* ============================================================
- * ★ 广告奖励：看广告领会员（mock 激励视频倒计时）
+ * ★ 广告奖励：看广告领会员（由 js/ads.js 适配国际广告联盟）
  * ------------------------------------------------------------
- * 真实对接：把 startAdReward 里的倒计时换成激励视频 SDK 播放，
- *   在 SDK 的 onReward 回调里调用 claimAdReward() 发放会员即可。
+ * 广告配置来自服务端 /api/config；未配置广告位时走本地倒计时。
+ *   在广告的 onReward 回调里调用 claimReward() 发放会员即可。
  *   发放逻辑全部封装在 MockAPI.extendVipByAdReward，前端只负责展示。
  * ============================================================ */
-const AD_MOCK_SECONDS = 5; // mock 广告时长（秒），仅用于演示流程
 
 /* 刷新首页「今日剩余 N 次」配额展示 */
 function renderAdRewardQuota() {
@@ -585,12 +546,15 @@ function closeAdModal() {
   if (!els.adModal) return;
   els.adModal.classList.add('hidden');
   els.adModal.classList.remove('flex');
-  clearInterval(state.adTimer);
-  state.adTimer = null;
+  Ads.stop();
+  if (els.adSlot) {
+    els.adSlot.classList.add('hidden');
+    els.adSlot.classList.remove('flex');
+  }
 }
 
-/* 点击「看广告领会员」：先校验登录态与每日配额，再播放 mock 倒计时 */
-function startAdReward() {
+/* 点击「看广告领会员」：先校验登录态与每日配额，再按适配层配置播放广告 */
+async function startAdReward() {
   const user = Store.getUser() || {};
   // ★ 会员绑定登录账号：游客不参与广告奖励
   if (!user.loggedIn || user.guest) {
@@ -606,32 +570,40 @@ function startAdReward() {
   }
 
   // 重置弹窗 UI
-  els.adCountdown.textContent = `${AD_MOCK_SECONDS}s`;
-  els.adTip.textContent = '广告播放中，请稍候…';
+  els.adCountdown.textContent = '…';
+  els.adTip.textContent = '正在加载广告…';
   els.adClaim.disabled = true;
   els.adClaim.classList.remove('bg-brand-600');
   els.adClaim.classList.add('bg-slate-300');
   els.adClaim.textContent = '领取会员';
   openAdModal();
 
-  // mock：倒计时结束后解锁「领取会员」按钮
-  // （真实环境：此处替换为广告 SDK 播放，onReward 回调里直接调 claimAdReward）
-  state.adSecondsLeft = AD_MOCK_SECONDS;
-  clearInterval(state.adTimer);
-  state.adTimer = setInterval(() => {
-    state.adSecondsLeft -= 1;
-    if (state.adSecondsLeft > 0) {
-      els.adCountdown.textContent = `${state.adSecondsLeft}s`;
-    } else {
-      clearInterval(state.adTimer);
-      state.adTimer = null;
+  const adConfig = await Ads.init();
+  if (els.adModal.classList.contains('hidden')) return; // 加载期间用户已关闭
+
+  els.adTip.textContent = '广告播放中，请稍候…';
+  // 真实广告位先显示容器，再交给广告 SDK 注入
+  if (els.adSlot && adConfig.provider !== 'mock') {
+    els.adSlot.classList.remove('hidden');
+    els.adSlot.classList.add('flex');
+  }
+
+  Ads.play({
+    onProgress: (left) => {
+      els.adCountdown.textContent = left > 0 ? `${left}s` : '✓';
+    },
+    onReward: () => {
       els.adCountdown.textContent = '✓';
       els.adTip.textContent = '广告已看完，点击下方按钮领取会员';
       els.adClaim.disabled = false;
       els.adClaim.classList.remove('bg-slate-300');
       els.adClaim.classList.add('bg-brand-600');
-    }
-  }, 1000);
+    },
+    onError: (err) => {
+      closeAdModal();
+      toast((err && err.message) || '广告加载失败，请稍后再试');
+    },
+  });
 }
 
 /* 倒计时结束后点击领取：调用接口发放会员天数并刷新所有会员展示 */
@@ -643,7 +615,7 @@ async function claimAdReward() {
 
   const res = await MockAPI.extendVipByAdReward();
   if (res.ok) {
-    toast(`已领取 ${res.days} 天 AI 会员，有效期至 ${formatExpire(res.vipExpireTime)}`);
+    toast(`已领取 ${res.days} 天词溯会员，有效期至 ${formatExpire(res.vipExpireTime)}`);
     await refreshHome(); // 刷新首页会员卡 / 到期时间 / 配额
     await renderMe();    // 刷新统计页到期展示
     updateRecoLabel();   // 答题页推荐标识同步
@@ -674,7 +646,7 @@ function renderVipCard() {
   const user = Store.getUser() || {};
   const guest = !user.loggedIn || !!user.guest;
   if (els.accountIdentity) {
-    els.accountIdentity.textContent = guest ? '游客 · 未登录' : (vip ? 'AI 会员' : '免费用户');
+    els.accountIdentity.textContent = guest ? '游客 · 未登录' : (vip ? '词溯会员' : '免费用户');
   }
   if (els.accountExpire) {
     els.accountExpire.textContent = vip && expireText ? `到期 ${expireText}` : '';
@@ -696,10 +668,10 @@ function closeAccountMenu() {
   if (els.accountMenu) els.accountMenu.classList.add('hidden');
 }
 
-/* 答题页角落小字：会员「AI收益推荐中」/ 免费「SM2基础复习」 */
+/* 答题页角落小字：会员「精准推荐中」/ 免费「基础复习」 */
 function updateRecoLabel() {
   if (!els.quizRecoLabel) return;
-  els.quizRecoLabel.textContent = isVip() ? 'AI收益推荐中' : 'SM2基础复习';
+  els.quizRecoLabel.textContent = isVip() ? '精准推荐中' : '基础复习';
 }
 
 /* 统计页 KC 雷达：会员展示三维掌握，免费显示开通引导 */
@@ -708,6 +680,7 @@ async function renderKCRadar() {
   if (els.kcRadarMember) els.kcRadarMember.classList.toggle('hidden', !vip);
   if (els.kcRadarLocked) els.kcRadarLocked.classList.toggle('hidden', vip);
   if (!vip) return;
+  if (!els.kcRadarSvg) return; // ★ 维度掌握卡已下线（雷达归一为全员薄弱雷达）
 
   const res = await MockAPI.getKCSummary();
   const items = res.items || [];
@@ -865,7 +838,7 @@ const LEGAL_TEXT = {
     title: '隐私政策',
     blocks: [
       '词溯重视你的隐私。本政策说明我们收集哪些信息、如何使用，以及你可以如何管理自己的数据。',
-      '一、我们收集的信息\n1. 账号信息：手机号或微信标识，仅用于登录与账号识别。\n2. 学习数据：作答记录、掌握标记、复习间隔、打卡与收藏，用于生成学习报告和推荐下一题。\n3. 设备本地数据：游客模式下所有数据只保存在本机浏览器中。',
+      '一、我们收集的信息\n1. 账号信息：邮箱地址，仅用于登录与账号识别。\n2. 学习数据：作答记录、掌握标记、复习间隔、打卡与收藏，用于生成学习报告和推荐下一题。\n3. 设备本地数据：游客模式下所有数据只保存在本机浏览器中。',
       '二、信息的使用\n学习数据仅用于为你安排复习节奏、展示统计与周报，不会用于与学习无关的用途。',
       '三、信息的存储\n未登录时数据保存在本机；登录后同步到账号，用于多端恢复。你可以在「我的 - 学习工具」中导出或注销删除。',
       '四、你的权利\n你可以随时导出学习数据、重置学习记录或注销账号。注销后账号与服务端学习数据将被删除且不可恢复。',
@@ -876,10 +849,10 @@ const LEGAL_TEXT = {
     title: '用户协议',
     blocks: [
       '欢迎使用词溯。使用本应用即表示你同意以下条款。',
-      '一、服务内容\n词溯提供单词学习、刷题、错题复测、学习统计等功能。部分功能（如 AI 会员）需要登录后使用。',
+      '一、服务内容\n词溯提供单词学习、刷题、错题复测、学习统计等功能。部分功能（如词溯会员）需要登录后使用。',
       '二、账号与数据\n请妥善保管账号。游客数据仅保存在本机，更换设备或清理浏览器数据可能导致丢失；登录后可多端同步。',
       '三、使用规范\n请勿利用本应用进行任何违法或干扰服务正常运行的行为。',
-      '四、会员与广告\n会员权益、赠送与广告奖励以应用内展示的规则为准。体验版开通不产生真实支付。',
+      '四、会员与广告\n词溯会员仅通过观看广告获得，不提供任何付费购买渠道；会员权益与广告奖励以应用内展示的规则为准。',
       '五、免责声明\n词库与释义仅供参考，学习效果因人而异。因设备、网络或不可抗力造成的服务中断，我们会尽力恢复但不承担由此产生的间接损失。',
       '六、条款更新\n我们可能根据功能调整更新本协议，更新后会在应用内展示。',
     ],
@@ -1145,7 +1118,7 @@ function resetQuestionUI() {
   if (els.quizImage) els.quizImage.removeAttribute('src');
   els.quizHint.classList.add('hidden');
   els.quizAnalysis.classList.add('hidden');
-  els.btnSubmit.classList.remove('hidden');
+  els.btnSubmit.classList.add('hidden'); // ★ 选择题点选项即提交；提交按钮仅完形填空显示
   els.btnNext.classList.add('hidden');
   els.btnHint.classList.add('hidden'); // 出题后再按是否有助记决定显示
 }
@@ -1211,6 +1184,13 @@ function renderQuestion(q) {
 
   // ★ 没有助记就不出「查看提示」按钮，避免点开永远没内容
   els.btnHint.classList.toggle('hidden', !(q.explanation && q.explanation.hint));
+
+  // ★ 选择题点选项即判分；「提交答案」按钮只留给完形填空
+  els.btnSubmit.classList.toggle('hidden', q.type !== 'cloze');
+
+  // ★ 底部操作栏固定后，新题出现时把滚动区滚回顶部，避免停留在上一题位置
+  const quizScroll = $('quiz-scroll');
+  if (quizScroll) quizScroll.scrollTop = 0;
 
   startTimer();
 }
@@ -1647,14 +1627,12 @@ async function renderMe() {
   const user = Store.getUser() || {};
   els.meUsername.textContent = user.username || '同学';
 
-  // 账号信息：游客 / 手机号 / 微信（登录后才展示退出入口）
+  // 账号信息：游客 / 邮箱（登录后才展示退出入口）
   if (els.meAccount) {
     if (!user.loggedIn) {
       els.meAccount.textContent = '游客模式 · 记录仅保存在本机';
-    } else if (user.authMode === 'wechat') {
-      els.meAccount.textContent = '微信登录 · 记录可多端同步';
     } else {
-      els.meAccount.textContent = `手机号 ${maskPhone(user.phone)} · 记录可多端同步`;
+      els.meAccount.textContent = `邮箱 ${maskEmail(user.email)} · 记录可多端同步`;
     }
   }
   $('btn-logout').classList.toggle('hidden', !user.loggedIn);
@@ -1669,14 +1647,18 @@ async function renderMe() {
   if (els.meVipExpire) {
     if (info.active) {
       els.meVipExpire.textContent = info.expireAt
-        ? `AI 会员 · 有效期至 ${formatExpire(info.expireAt)}`
-        : 'AI 会员 · 长期有效';
+        ? `词溯会员 · 有效期至 ${formatExpire(info.expireAt)}`
+        : '词溯会员 · 长期有效';
     } else if (info.expired) {
-      els.meVipExpire.textContent = `会员已于 ${formatExpire(info.expireAt)} 到期，已回落到 SM2 基础复习`;
+      els.meVipExpire.textContent = `会员已于 ${formatExpire(info.expireAt)} 到期，已回落到基础复习`;
     } else {
-      els.meVipExpire.textContent = !user.loggedIn ? '' : '免费用户 · SM2 基础复习';
+      els.meVipExpire.textContent = !user.loggedIn ? '' : '免费用户 · 基础复习';
     }
   }
+
+  // ★ 底部数据说明：已登录用户不再重复提示「保存在本机」
+  const meDataNote = $('me-data-note');
+  if (meDataNote) meDataNote.classList.toggle('hidden', !!user.loggedIn);
 
   els.meBook.textContent = bookName(user.wordbook || 'zk');
   els.meLevel.textContent = levelName(user.level || 'general');
@@ -1779,6 +1761,7 @@ function bindEvents() {
     const btn = e.target.closest('button[data-key]');
     if (!btn) return;
     selectOption(btn.dataset.key);
+    submitCurrentAnswer(); // ★ 选择题：选中即提交判分，少点一次「提交答案」
   });
 
   // ★ 完形填空：记录每个下拉框的选择
@@ -1921,18 +1904,15 @@ function bindEvents() {
   els.guestHint.addEventListener('click', openLogin);
   $('login-back').addEventListener('click', () => showView('welcome'));
 
-  // 手机号验证码登录（mock）
+  // 邮箱验证码登录
   els.btnSendCode.addEventListener('click', sendCode);
-  els.btnPhoneLogin.addEventListener('click', doPhoneLogin);
-  els.loginPhone.addEventListener('keydown', (e) => {
+  els.btnEmailLogin.addEventListener('click', doEmailLogin);
+  els.loginEmail.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') els.loginCode.focus();
   });
   els.loginCode.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') doPhoneLogin();
+    if (e.key === 'Enter') doEmailLogin();
   });
-
-  // 微信一键登录（mock，后续替换为 OAuth 回调）
-  $('btn-wechat-login').addEventListener('click', doWechatLogin);
 
   // 退出登录弹窗：保留本地记录 / 清空本地记录
   $('btn-logout').addEventListener('click', openLogoutModal);
@@ -1945,14 +1925,14 @@ function bindEvents() {
 
   /* ---------- ★ 会员：卡片 / 弹窗 / 账号下拉 ---------- */
   els.btnOpenVip.addEventListener('click', openVipModal);
-  els.btnOpenVipMe.addEventListener('click', openVipModal);
+  if (els.btnOpenVipMe) els.btnOpenVipMe.addEventListener('click', openVipModal); // ★ 维度掌握卡已下线，元素不存在
   els.vipClose.addEventListener('click', closeVipModal);
   els.vipModal.addEventListener('click', (e) => {
     if (e.target === els.vipModal) closeVipModal();
   });
-  els.btnActivateVip.addEventListener('click', doActivateVip);
+  els.btnVipReward.addEventListener('click', doVipReward);
 
-  // ★ 广告奖励：看广告领会员（mock 激励视频）
+  // ★ 广告奖励：看广告领会员（国际广告适配层）
   els.btnAdReward.addEventListener('click', startAdReward);
   els.adClaim.addEventListener('click', claimAdReward);
   els.adClose.addEventListener('click', closeAdModal);

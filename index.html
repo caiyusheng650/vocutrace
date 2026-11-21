@@ -3,215 +3,216 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#22ab98" />
+  <meta name="theme-color" content="#158a7c" />
   <meta name="description" content="词溯 · 移动端背单词刷题，定级、刷题、错题本、学习数据一站式闭环。" />
   <title>词溯 · 背单词刷题</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    /* 设计令牌：低饱和青绿 + 深灰文本 + 中性灰阶
+       覆盖 slate / emerald / rose / amber 默认色板，
+       让 app.js 动态注入的状态色也统一降饱和 */
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             brand: {
-              50: '#f0fbf8', 100: '#d9f5ee', 200: '#b4ebdf', 300: '#7fdcca',
-              400: '#45c6b2', 500: '#22ab98', 600: '#158a7c', 700: '#137065',
-              800: '#135950', 900: '#124a44',
+              50: '#f4faf8', 100: '#e3f1ec', 200: '#c7e3da', 300: '#9dcdc1',
+              400: '#64b4a4', 500: '#22ab98', 600: '#158a7c', 700: '#136f64',
+              800: '#12584f', 900: '#104840',
             },
-            ink: '#213231',
+            ink: '#2b3534',
             muted: '#7b918d',
-            paper: '#f6faf8',
+            paper: '#f7f9f8',
+            line: '#e4e9e7',
+            slate: {
+              50: '#f5f7f7', 100: '#ebeeee', 200: '#dfe3e2', 300: '#c5ccca',
+              400: '#9da8a5', 500: '#7b8784', 600: '#616d6a', 700: '#4e5856',
+              800: '#404a48', 900: '#363f3d',
+            },
+            emerald: {
+              50: '#f1f7f3', 100: '#dfeee4', 200: '#c0dccb', 300: '#97c3a9',
+              400: '#6da787', 500: '#4f9270', 600: '#3f785c', 700: '#35634d',
+              800: '#2d5140', 900: '#264436',
+            },
+            rose: {
+              50: '#faf4f4', 100: '#f4e5e5', 200: '#e7c9c9', 300: '#d6a5a5',
+              400: '#c28282', 500: '#ab6161', 600: '#914e4e', 700: '#784141',
+              800: '#643737', 900: '#543030',
+            },
+            amber: {
+              50: '#faf6ee', 100: '#f4ecda', 200: '#e8d8b0', 300: '#d9bf82',
+              400: '#c7a35c', 500: '#b28c43', 600: '#967337', 700: '#7a5c2e',
+              800: '#654b29', 900: '#543f24',
+            },
           },
+          borderColor: { DEFAULT: '#e4e9e7' },
           boxShadow: {
-            soft: '0 12px 30px -14px rgba(19,112,101,0.25)',
+            sm: '0 1px 2px rgba(28,44,40,0.05), 0 2px 8px -2px rgba(28,44,40,0.06)',
+            DEFAULT: '0 2px 6px -1px rgba(28,44,40,0.06), 0 10px 20px -8px rgba(28,44,40,0.10)',
+            md: '0 4px 10px -4px rgba(28,44,40,0.08), 0 14px 28px -10px rgba(28,44,40,0.12)',
+            lg: '0 6px 16px -6px rgba(28,44,40,0.10), 0 24px 48px -16px rgba(28,44,40,0.18)',
+            soft: '0 2px 6px -2px rgba(28,44,40,0.06), 0 18px 36px -18px rgba(28,44,40,0.20)',
+            pop: '0 2px 8px rgba(28,44,40,0.06), 0 30px 60px -22px rgba(28,44,40,0.30)',
           },
         },
       },
     };
   </script>
-  <style>
-    html { -webkit-text-size-adjust: 100%; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
-        "Microsoft YaHei", "Noto Sans SC", sans-serif;
-      background: #e8f1ee;
-      overscroll-behavior-y: none;
-    }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .view { min-height: 100vh; }
-    .tabbar { padding-bottom: env(safe-area-inset-bottom, 0px); }
-    .opt-btn {
-      -webkit-tap-highlight-color: transparent;
-      transition: transform .12s ease, border-color .15s ease, background-color .15s ease;
-    }
-    .opt-btn:active { transform: scale(.985); }
-    .fade-in { animation: fadeIn .28s ease both; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+  <link rel="stylesheet" href="css/theme.css?v=20261121b" />
 </head>
-<body class="text-ink antialiased selection:bg-brand-200">
-  <div id="app" class="relative mx-auto min-h-screen w-full max-w-[460px] bg-paper shadow-[0_0_80px_-30px_rgba(19,112,101,0.45)]">
+<body class="text-ink antialiased selection:bg-brand-100">
+  <div id="app" class="relative mx-auto min-h-screen w-full max-w-[460px] bg-paper shadow-[0_0_70px_-30px_rgba(28,44,40,0.4)]">
 
     <!-- ============================================================
          0. 欢迎页：游客体验 / 登录注册
     ============================================================ -->
-    <section id="view-welcome" class="view relative overflow-hidden bg-gradient-to-b from-brand-50 via-paper to-paper">
-      <div class="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-brand-200/40 blur-2xl"></div>
-      <div class="pointer-events-none absolute -left-20 bottom-10 h-52 w-52 rounded-full bg-amber-100/50 blur-2xl"></div>
+    <section id="view-welcome" class="view relative overflow-hidden">
+      <div class="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-brand-100/70 blur-3xl"></div>
+      <div class="pointer-events-none absolute -left-24 bottom-16 h-56 w-56 rounded-full bg-brand-50 blur-3xl"></div>
 
       <div class="relative z-10 flex min-h-screen flex-col px-6 pb-10 pt-16">
         <div class="flex items-center gap-3">
-          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-lg font-semibold text-white shadow-soft">词</div>
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-lg font-semibold text-white shadow-soft">词</div>
           <div>
-            <p class="text-lg font-semibold tracking-wide">词溯</p>
-            <p class="text-[11px] text-muted">不是刷题，是长久记住</p>
+            <p class="text-[17px] font-semibold tracking-wide">词溯</p>
+            <p class="mt-0.5 text-[11px] text-muted">不是刷题，是长久记住</p>
           </div>
         </div>
 
-        <div class="mt-14">
-          <h1 class="text-[30px] font-semibold leading-snug">把单词<br />真正留在记忆里</h1>
-          <p class="mt-3 text-sm leading-relaxed text-muted">定级、刷题、解析、错题复测，让单词按你的遗忘状态重新出现。</p>
+        <div class="mt-16">
+          <h1 class="text-[30px] font-semibold leading-[1.35] tracking-tight">把单词<br />真正留在记忆里</h1>
+          <p class="mt-4 text-sm leading-relaxed text-muted">定级、刷题、解析、错题复测，让单词按你的遗忘状态重新出现。</p>
           <div class="mt-6 flex flex-wrap gap-2">
-            <span class="rounded-full bg-white px-3 py-1.5 text-[11px] text-brand-700 shadow-sm">记忆分层</span>
-            <span class="rounded-full bg-white px-3 py-1.5 text-[11px] text-brand-700 shadow-sm">薄弱雷达</span>
-            <span class="rounded-full bg-white px-3 py-1.5 text-[11px] text-brand-700 shadow-sm">错题复测</span>
+            <span class="chip">记忆分层</span>
+            <span class="chip">薄弱雷达</span>
+            <span class="chip">错题复测</span>
           </div>
         </div>
 
         <div class="mt-auto space-y-3 pt-12">
-          <button id="btn-guest" class="w-full rounded-2xl bg-brand-600 py-4 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">游客体验</button>
-          <button id="btn-open-login" class="w-full rounded-2xl border-2 border-brand-200 bg-white py-4 text-[15px] font-semibold text-brand-700 active:scale-[.99]">登录 / 注册</button>
+          <button id="btn-guest" class="btn-primary w-full py-4 text-[15px]">游客体验</button>
+          <button id="btn-open-login" class="btn-secondary w-full py-4 text-[15px]">登录 / 注册</button>
           <p class="text-center text-[11px] leading-relaxed text-muted">游客数据保存在本机，登录后可多端同步</p>
         </div>
       </div>
     </section>
 
     <!-- ============================================================
-         0.1 登录 / 注册（手机号验证码 + 微信登录）
+         0.1 登录 / 注册（邮箱验证码）
     ============================================================ -->
-    <section id="view-login" class="view hidden px-6 pb-10 pt-12">
-      <button id="login-back" class="text-xs text-muted">← 返回</button>
+    <section id="view-login" class="view hidden px-5 pb-10 pt-8">
+      <button id="login-back" class="icon-btn" aria-label="返回">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>
+      </button>
 
-      <h1 class="mt-8 text-[26px] font-semibold leading-snug">登录 / 注册</h1>
-      <p class="mt-2 text-sm leading-relaxed text-muted">登录后学习记录可多端同步，本机已有的进度会自动带过来。</p>
+      <h1 class="mt-7 text-[26px] font-semibold leading-snug tracking-tight">登录 / 注册</h1>
+      <p class="mt-2 text-sm leading-relaxed text-muted">使用邮箱验证码登录，登录后学习记录可多端同步，本机已有的进度会自动带过来。</p>
 
-      <div class="mt-7 rounded-3xl bg-white p-5 shadow-soft">
-        <label for="login-phone" class="text-xs font-medium text-muted">手机号</label>
-        <input id="login-phone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入 11 位手机号"
-          class="mt-2 w-full rounded-2xl border-2 border-brand-100 bg-paper px-4 py-3.5 text-base outline-none transition focus:border-brand-400" />
+      <div class="card mt-7 rounded-3xl p-5 shadow-soft">
+        <label for="login-email" class="text-xs font-medium text-muted">邮箱</label>
+        <input id="login-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" class="input mt-2" />
 
         <div class="mt-4 flex items-center justify-between">
           <label for="login-code" class="text-xs font-medium text-muted">验证码</label>
           <p class="text-[10px] text-muted">6 位数字验证码</p>
         </div>
         <div class="mt-2 flex gap-2">
-          <input id="login-code" type="tel" inputmode="numeric" maxlength="6" placeholder="6 位数字"
-            class="min-w-0 flex-1 rounded-2xl border-2 border-brand-100 bg-paper px-4 py-3.5 text-base outline-none transition focus:border-brand-400" />
-          <button id="btn-send-code" class="shrink-0 rounded-2xl border-2 border-brand-200 px-4 text-xs font-medium text-brand-700 disabled:opacity-50">获取验证码</button>
+          <input id="login-code" type="tel" inputmode="numeric" maxlength="6" placeholder="6 位数字" class="input min-w-0 flex-1" />
+          <button id="btn-send-code" class="shrink-0 rounded-xl border border-brand-200 bg-brand-50 px-4 text-xs font-medium text-brand-700 hover:bg-brand-100/70 disabled:opacity-50">获取验证码</button>
         </div>
 
-        <button id="btn-phone-login" class="mt-5 w-full rounded-2xl bg-brand-600 py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">登录 / 注册</button>
+        <button id="btn-email-login" class="btn-primary mt-5 w-full py-3.5 text-[15px]">登录 / 注册</button>
         <p id="login-error" class="mt-2 hidden text-xs text-rose-500"></p>
-        <p class="mt-3 text-center text-[10px] leading-relaxed text-muted">未注册的手机号会自动创建账号<br />登录后本机学习进度会自动带过去</p>
+        <p class="mt-3 text-center text-[10px] leading-relaxed text-muted">未注册的邮箱会自动创建账号<br />登录后本机学习进度会自动带过去</p>
       </div>
-
-      <div class="mt-6 flex items-center gap-3">
-        <span class="h-px flex-1 bg-brand-100"></span>
-        <span class="text-[11px] text-muted">或</span>
-        <span class="h-px flex-1 bg-brand-100"></span>
-      </div>
-
-      <button id="btn-wechat-login" class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#07c160] py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 4C5.8 4 3 6.5 3 9.6c0 1.8 1 3.4 2.6 4.4l-.5 1.8 2-1c.7.2 1.5.3 2.3.3h.4c-.2-.6-.3-1.3-.3-2 0-3 2.8-5.4 6.3-5.4h.6C15.3 5.3 12.6 4 9.4 4z"/><path d="M15.8 7.8C12.7 7.8 10 9.8 10 12.3s2.7 4.5 5.8 4.5c.7 0 1.4-.1 2-.3l1.7.9-.4-1.5c1.3-.9 2.1-2.2 2.1-3.7 0-2.5-2.4-4.4-5.4-4.4z"/></svg>
-        微信一键登录
-      </button>
-      <p class="mt-3 text-center text-[10px] leading-relaxed text-muted">体验版微信登录<br />正式版将接入微信授权</p>
     </section>
 
     <!-- ============================================================
          1. 登录 & 定级引导
     ============================================================ -->
-    <section id="view-onboarding" class="view relative overflow-hidden bg-gradient-to-b from-brand-50 via-paper to-paper">
-      <div class="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-brand-200/40 blur-2xl"></div>
-      <div class="pointer-events-none absolute -left-20 top-64 h-52 w-52 rounded-full bg-amber-100/50 blur-2xl"></div>
+    <section id="view-onboarding" class="view relative overflow-hidden">
+      <div class="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-brand-100/70 blur-3xl"></div>
+      <div class="pointer-events-none absolute -left-24 top-64 h-56 w-56 rounded-full bg-brand-50 blur-3xl"></div>
 
       <div class="relative z-10 flex min-h-screen flex-col px-6 pb-10 pt-12">
         <div class="mb-9 flex items-center gap-3">
-          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-lg font-semibold text-white shadow-soft">词</div>
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-lg font-semibold text-white shadow-soft">词</div>
           <div>
-            <p class="text-lg font-semibold tracking-wide">词溯</p>
-            <p class="text-[11px] text-muted">每天刷一点，词汇慢慢长出来</p>
+            <p class="text-[17px] font-semibold tracking-wide">词溯</p>
+            <p class="mt-0.5 text-[11px] text-muted">每天刷一点，词汇慢慢长出来</p>
           </div>
         </div>
 
         <div class="flex-1">
           <!-- Step 1：用户名 -->
           <div id="ob-1" class="ob-step">
-            <h1 class="text-[26px] font-semibold leading-snug">先认识一下，你叫什么？</h1>
+            <h1 class="text-[26px] font-semibold leading-snug tracking-tight">先认识一下，你叫什么？</h1>
             <p class="mt-2 text-sm text-muted">只用昵称登录，数据保存在这台设备上，不需要密码。</p>
 
             <div class="mt-8">
               <label for="ob-username" class="text-xs font-medium text-muted">你的昵称</label>
-              <input id="ob-username" type="text" maxlength="12" autocomplete="nickname"
-                placeholder="例如：小溯"
-                class="mt-2 w-full rounded-2xl border-2 border-brand-100 bg-white px-4 py-3.5 text-base outline-none transition focus:border-brand-400" />
+              <input id="ob-username" type="text" maxlength="12" autocomplete="nickname" placeholder="例如：小溯" class="input mt-2 bg-white" />
               <p id="ob-username-error" class="mt-2 hidden text-xs text-rose-500">请输入昵称</p>
             </div>
           </div>
 
           <!-- Step 2：选词书 -->
           <div id="ob-2" class="ob-step hidden">
-            <h1 class="text-[26px] font-semibold leading-snug">选一本要背的词书</h1>
+            <h1 class="text-[26px] font-semibold leading-snug tracking-tight">选一本要背的词书</h1>
             <p class="mt-2 text-sm text-muted">之后可以随时在「词书」页切换。</p>
             <div id="ob-books" class="mt-7 space-y-3"></div>
           </div>
 
           <!-- Step 3：自评水平 -->
           <div id="ob-3" class="ob-step hidden">
-            <h1 class="text-[26px] font-semibold leading-snug">你的词汇量大概在哪一档？</h1>
+            <h1 class="text-[26px] font-semibold leading-snug tracking-tight">你的词汇量大概在哪一档？</h1>
             <p class="mt-2 text-sm text-muted">只是帮你安排节奏，暂时不影响出题难度。</p>
             <div id="ob-levels" class="mt-7 space-y-3"></div>
           </div>
 
           <!-- Step 4：定级说明 -->
           <div id="ob-4" class="ob-step hidden">
-            <div class="rounded-3xl bg-white p-6 shadow-soft">
-              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-100 text-2xl">🎯</div>
-              <h1 class="mt-4 text-xl font-semibold">最后做 6 道定级题</h1>
+            <div class="card rounded-3xl p-6 shadow-soft">
+              <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-brand-100 bg-brand-50 text-brand-600">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2"/></svg>
+              </div>
+              <h1 class="mt-4 text-xl font-semibold tracking-tight">最后做 6 道定级题</h1>
               <p class="mt-2 text-sm leading-relaxed text-muted">
                 题目从所选词书里随机抽取，只走一遍定级流程。目前不参与真实难度计算，凭感觉选就好。
               </p>
-              <div id="ob-summary" class="mt-5 space-y-2 rounded-2xl bg-brand-50 p-4 text-sm"></div>
+              <div id="ob-summary" class="mt-5 space-y-2 rounded-2xl border border-line bg-paper p-4 text-sm"></div>
             </div>
           </div>
 
           <!-- Step 5：定级结果 -->
           <div id="ob-5" class="ob-step hidden">
-            <div class="rounded-3xl bg-white p-6 text-center shadow-soft">
-              <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-3xl">🌱</div>
-              <h1 class="mt-4 text-xl font-semibold">定级完成</h1>
+            <div class="card rounded-3xl p-6 text-center shadow-soft">
+              <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-brand-100 bg-brand-50 text-brand-600">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-7.5"/><path d="M12 13.5C12 10 9.5 7.5 6 7.5c0 3.5 2.5 6 6 6z"/><path d="M12 13.5c0-3.5 2.5-6 6-6 0 3.5-2.5 6-6 6z"/></svg>
+              </div>
+              <h1 class="mt-4 text-xl font-semibold tracking-tight">定级完成</h1>
               <p id="ob-result-text" class="mt-2 text-sm text-muted"></p>
-              <div id="ob-result-box" class="mt-5 rounded-2xl bg-brand-50 p-4"></div>
+              <div id="ob-result-box" class="mt-5 rounded-2xl border border-line bg-paper p-4"></div>
             </div>
           </div>
         </div>
 
         <div class="mt-8">
           <div id="ob-actions" class="space-y-3">
-            <button id="ob-next-1" class="w-full rounded-2xl bg-brand-600 py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">下一步</button>
-            <button id="ob-next-2" class="hidden w-full rounded-2xl bg-brand-600 py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">下一步</button>
-            <button id="ob-next-3" class="hidden w-full rounded-2xl bg-brand-600 py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">下一步</button>
-            <button id="ob-start-placement" class="hidden w-full rounded-2xl bg-brand-600 py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">开始定级</button>
-            <button id="ob-enter-app" class="hidden w-full rounded-2xl bg-brand-600 py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">进入首页</button>
+            <button id="ob-next-1" class="btn-primary w-full py-3.5 text-[15px]">下一步</button>
+            <button id="ob-next-2" class="btn-primary hidden w-full py-3.5 text-[15px]">下一步</button>
+            <button id="ob-next-3" class="btn-primary hidden w-full py-3.5 text-[15px]">下一步</button>
+            <button id="ob-start-placement" class="btn-primary hidden w-full py-3.5 text-[15px]">开始定级</button>
+            <button id="ob-enter-app" class="btn-primary hidden w-full py-3.5 text-[15px]">进入首页</button>
           </div>
 
           <div class="mt-4 flex items-center justify-between">
-            <button id="ob-back" class="hidden text-xs text-muted">← 上一步</button>
+            <button id="ob-back" class="hidden inline-flex items-center gap-1 text-xs text-muted hover:text-ink">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></svg>
+              上一步
+            </button>
             <div id="ob-dots" class="ml-auto flex items-center gap-1.5">
               <span class="h-1.5 w-1.5 rounded-full bg-brand-400"></span>
               <span class="h-1.5 w-1.5 rounded-full bg-brand-200"></span>
@@ -230,197 +231,194 @@
       <header class="mb-6 flex items-start justify-between">
         <div>
           <p class="text-[11px] tracking-wide text-muted">今天也要背单词</p>
-          <h1 id="home-greeting" class="mt-1 text-[24px] font-semibold leading-tight">你好</h1>
+          <h1 id="home-greeting" class="mt-1 text-[24px] font-semibold leading-tight tracking-tight">你好</h1>
         </div>
         <div class="relative">
-          <button id="btn-go-me" class="flex h-11 w-11 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">词</button>
+          <button id="btn-go-me" class="flex h-11 w-11 items-center justify-center rounded-full border border-brand-100 bg-white text-sm font-semibold text-brand-700 shadow-sm hover:border-brand-300">词</button>
           <!-- ★ 账号下拉菜单：展示当前身份（免费用户 / AI会员） -->
-          <div id="account-menu" class="hidden absolute right-0 top-12 z-50 w-44 rounded-2xl bg-white p-2 shadow-lg">
+          <div id="account-menu" class="hidden absolute right-0 top-12 z-50 w-44 rounded-2xl border border-line bg-white p-2 shadow-pop">
             <div class="px-2 py-1.5">
               <p class="text-[10px] text-muted">当前身份</p>
               <p id="account-identity" class="mt-0.5 text-sm font-semibold text-brand-700">免费用户</p>
               <!-- ★ 会员时间判断模块：会员到期时间展示 -->
               <p id="account-expire" class="mt-0.5 text-[10px] text-muted"></p>
             </div>
-            <button id="menu-go-me" class="mt-1 flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs hover:bg-brand-50">我的 ›</button>
-            <button id="menu-login" class="mt-1 hidden w-full rounded-xl bg-brand-600 px-2.5 py-2 text-xs font-medium text-white">登录 / 注册</button>
+            <button id="menu-go-me" class="mt-1 flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs hover:bg-paper">我的 ›</button>
+            <button id="menu-login" class="mt-1 hidden w-full rounded-xl bg-brand-600 px-2.5 py-2 text-xs font-medium text-white hover:bg-brand-700">登录 / 注册</button>
             <button id="menu-logout" class="mt-1 hidden w-full rounded-xl px-2.5 py-2 text-left text-xs text-rose-500 hover:bg-rose-50">退出登录 ›</button>
           </div>
         </div>
       </header>
 
-      <div class="rounded-3xl bg-gradient-to-br from-brand-500 to-brand-700 p-5 text-white shadow-soft">
-        <div class="flex items-center justify-between">
-          <p class="text-sm font-medium">今日任务</p>
-          <span id="home-book-tag" class="rounded-full bg-white/15 px-2.5 py-1 text-[11px]">中考</span>
-        </div>
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 text-white shadow-soft">
+        <div class="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full bg-white/[0.06]"></div>
+        <div class="pointer-events-none absolute -bottom-16 -left-8 h-40 w-40 rounded-full bg-white/[0.05]"></div>
+        <div class="relative">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-medium text-white/90">今日任务</p>
+            <span id="home-book-tag" class="rounded-full bg-white/15 px-2.5 py-1 text-[11px] text-white/90">中考</span>
+          </div>
 
-        <div class="mt-4 grid grid-cols-2 gap-3">
-          <div class="rounded-2xl bg-white/10 p-3.5">
-            <p class="text-[11px] text-white/70">新词</p>
-            <p class="mt-1 text-2xl font-semibold"><span id="home-new">0</span><span id="home-new-target" class="ml-1 text-xs font-normal text-white/65">/ 20</span></p>
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/10 p-3.5">
+              <p class="text-[11px] text-white/65">新词</p>
+              <p class="mt-1.5 text-[26px] font-semibold leading-none"><span id="home-new">0</span><span id="home-new-target" class="ml-1 text-xs font-normal text-white/60">/ 20</span></p>
+            </div>
+            <div class="rounded-2xl bg-white/10 p-3.5">
+              <p class="text-[11px] text-white/65">复习</p>
+              <p class="mt-1.5 text-[26px] font-semibold leading-none"><span id="home-review">0</span><span class="ml-1 text-xs font-normal text-white/60">个错词</span></p>
+            </div>
           </div>
-          <div class="rounded-2xl bg-white/10 p-3.5">
-            <p class="text-[11px] text-white/70">复习</p>
-            <p class="mt-1 text-2xl font-semibold"><span id="home-review">0</span><span class="ml-1 text-xs font-normal text-white/65">个错词</span></p>
-          </div>
-        </div>
 
-        <div class="mt-5">
-          <div class="flex items-center justify-between text-[11px] text-white/75">
-            <span>今日进度</span>
-            <span id="home-progress-text">0 / 20</span>
-          </div>
-          <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/20">
-            <div id="home-progress-bar" class="h-full rounded-full bg-white transition-all" style="width: 0%"></div>
+          <div class="mt-5">
+            <div class="flex items-center justify-between text-[11px] text-white/70">
+              <span>今日进度</span>
+              <span id="home-progress-text">0 / 20</span>
+            </div>
+            <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+              <div id="home-progress-bar" class="h-full rounded-full bg-white transition-all" style="width: 0%"></div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- ★ 每日打卡 + 近 7 天学习 -->
-      <div class="mt-4 rounded-2xl bg-white p-4 shadow-sm">
+      <div class="card mt-4 p-4">
         <div class="flex items-center justify-between gap-3">
           <div class="flex min-w-0 items-center gap-3">
-            <div id="checkin-badge" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-xl">🔥</div>
+            <div id="checkin-badge" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-600">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-3.3 0-6-2.6-6-5.8 0-2.8 1.7-5.1 3.4-6.7L12 6l2.6 2.5c1.7 1.6 3.4 3.9 3.4 6.7 0 3.2-2.7 5.8-6 5.8z"/><path d="M12 21a2.6 2.6 0 0 1-2.6-2.6c0-1.4 1.2-2.6 2.6-3.9 1.4 1.3 2.6 2.5 2.6 3.9A2.6 2.6 0 0 1 12 21z"/></svg>
+            </div>
             <div class="min-w-0">
-              <p class="text-sm font-semibold">连续打卡 <span id="checkin-streak" class="text-brand-700">0</span> 天</p>
+              <p class="text-sm font-semibold">连续打卡 <span id="checkin-streak" class="text-[16px] text-brand-700">0</span> 天</p>
               <p id="checkin-today" class="mt-0.5 text-[11px] leading-relaxed text-muted">今天还没开始，做一题自动打卡</p>
             </div>
           </div>
-          <button id="btn-weekly" class="shrink-0 rounded-xl bg-brand-50 px-3 py-2 text-[11px] font-medium text-brand-700">学习周报</button>
+          <button id="btn-weekly" class="shrink-0 rounded-full border border-line bg-white px-3 py-1.5 text-[11px] font-medium text-muted hover:border-brand-300 hover:text-brand-700">学习周报</button>
         </div>
         <div id="checkin-days" class="mt-3 grid grid-cols-7 gap-1.5"></div>
       </div>
 
-      <!-- 会员卡片：解锁 AI 精准复习（放在今日任务下方） -->
-      <div id="vip-home-card" class="mt-4 rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-4 shadow-sm">
+      <!-- 主行动按钮：紧跟今日信息，保证首屏可见 -->
+      <button id="btn-start" class="btn-dark mt-4 w-full py-4 text-[15px]">
+        开始刷题
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+
+      <!-- 会员卡：解锁词溯精准复习 -->
+      <div id="vip-home-card" class="card mt-4 border-brand-100 bg-gradient-to-br from-brand-50/70 to-white p-4">
         <!-- 免费用户：展示解锁入口 -->
         <div id="vip-home-free" class="flex items-center gap-3">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-lg text-white">✨</div>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold text-brand-800">新用户注册即享 5 个月免费 AI 会员</p>
-            <p class="mt-0.5 text-[11px] leading-relaxed text-muted">解锁维度追踪 + AI 收益精准推荐</p>
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-100 bg-white text-brand-600">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 13.6 8.9 18 10.5 13.6 12.1 12 16.5 10.4 12.1 6 10.5 10.4 8.9 12 4.5z"/><path d="m18.5 15.5.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"/></svg>
           </div>
-          <button id="btn-open-vip" class="shrink-0 rounded-xl bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white active:scale-[.98]">立即解锁</button>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-brand-800">看广告即可领取词溯会员</p>
+            <p class="mt-0.5 text-[11px] leading-relaxed text-muted">解锁薄弱维度追踪 + 精准推荐习题</p>
+          </div>
+          <button id="btn-open-vip" class="shrink-0 rounded-full bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-brand-700">去领取</button>
         </div>
         <!-- 会员：展示已启用 -->
         <div id="vip-home-member" class="hidden items-center gap-3">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-lg text-white">👑</div>
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 8 4.3 3L12 5.8 15.2 11l4.3-3-1.3 9.3H5.8L4.5 8z"/><path d="M6 20.2h12"/></svg>
+          </div>
           <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold text-brand-800">AI 会员已解锁</p>
-            <p class="mt-0.5 text-[11px] text-muted">正在按 KC 薄弱 + 遗忘收益为你推荐习题</p>
+            <p class="text-sm font-semibold text-brand-800">词溯会员已解锁</p>
+            <p class="mt-0.5 text-[11px] text-muted">正在按你的薄弱点和遗忘规律精准推荐习题</p>
             <p id="vip-home-expire" class="mt-0.5 text-[10px] text-brand-600"></p>
           </div>
           <span class="shrink-0 rounded-full bg-brand-600 px-2.5 py-1 text-[10px] font-medium text-white">已启用</span>
         </div>
         <!-- ★ 广告奖励入口：免费 / 会员都可看广告延长会员 -->
-        <button id="btn-ad-reward" class="mt-3 flex w-full items-center justify-between rounded-2xl border-2 border-dashed border-brand-200 bg-brand-50/60 px-4 py-3 text-left active:scale-[.99]">
-          <span class="flex items-center gap-2">
-            <span class="text-base">🎬</span>
-            <span class="text-xs font-medium text-brand-800">看广告，领 3 天 AI 会员</span>
+        <button id="btn-ad-reward" class="mt-3 flex w-full items-center justify-between rounded-xl border border-dashed border-brand-200 bg-brand-50/50 px-4 py-3 text-left hover:bg-brand-50">
+          <span class="flex items-center gap-2.5">
+            <span class="text-brand-600">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7.5 5v14"/><path d="M16.5 5v14"/><path d="M3 9.5h4.5"/><path d="M3 14.5h4.5"/><path d="M16.5 9.5H21"/><path d="M16.5 14.5H21"/></svg>
+            </span>
+            <span class="text-xs font-medium text-brand-800">看广告，领 3 天词溯会员</span>
           </span>
-          <span id="ad-reward-quota" class="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] text-brand-600 shadow-sm">今日剩余 3 次</span>
+          <span id="ad-reward-quota" class="shrink-0 rounded-full border border-line bg-white px-2.5 py-1 text-[10px] text-brand-600">今日剩余 3 次</span>
         </button>
       </div>
 
-      <button id="btn-start" class="mt-5 w-full rounded-2xl bg-ink py-4 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">
-        开始刷题 →
-      </button>
-
       <div class="mt-5 grid grid-cols-2 gap-3">
-        <div class="rounded-2xl bg-white p-4 shadow-sm">
+        <div class="card p-4">
           <p class="text-[11px] text-muted">已掌握单词</p>
-          <p class="mt-1 text-xl font-semibold text-brand-700"><span id="home-mastered">0</span><span id="home-total" class="ml-1 text-xs font-normal text-muted">/ 20</span></p>
+          <p class="mt-1.5 text-[22px] font-semibold leading-none text-brand-700"><span id="home-mastered">0</span><span id="home-total" class="ml-1 text-xs font-normal text-muted">/ 20</span></p>
         </div>
-        <div class="rounded-2xl bg-white p-4 shadow-sm">
+        <div class="card p-4">
           <p class="text-[11px] text-muted">今日正确率</p>
-          <p class="mt-1 text-xl font-semibold text-ink"><span id="home-accuracy">0</span><span class="ml-0.5 text-xs font-normal text-muted">%</span></p>
+          <p class="mt-1.5 text-[22px] font-semibold leading-none text-ink"><span id="home-accuracy">0</span><span class="ml-0.5 text-xs font-normal text-muted">%</span></p>
         </div>
       </div>
 
-      <!-- 记忆分层：按遗忘状态把词分三档 -->
-      <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm">
-        <div class="flex items-baseline justify-between">
-          <h2 class="text-sm font-semibold">记忆分层</h2>
-          <span class="text-[11px] text-muted">按遗忘状态归档</span>
-        </div>
-        <div id="memory-layer-bar" class="mt-4 flex h-3 w-full overflow-hidden rounded-full bg-brand-50"></div>
-        <div id="memory-layer-list" class="mt-4 grid grid-cols-3 gap-2"></div>
-      </div>
-
-      <!-- 薄弱雷达：释义 / 搭配 / 完形 / 拼写 -->
-      <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm">
-        <div class="flex items-baseline justify-between">
-          <h2 class="text-sm font-semibold">薄弱雷达</h2>
-          <span class="text-[11px] text-muted">四个维度</span>
-        </div>
-        <div id="memory-radar" class="mt-1 flex justify-center"></div>
-        <p id="memory-radar-note" class="mt-1 text-[11px] leading-relaxed text-muted">
-          习题推荐基于你的薄弱和遗忘状态：越靠里，说明这块越需要补。
-        </p>
-      </div>
-
-      <div class="mt-4 flex items-start gap-3 rounded-2xl bg-brand-50 p-4">
-        <span class="text-lg">🌱</span>
-        <p class="text-xs leading-relaxed text-brand-800">
-          不追刷题量，只追长久记住。答错的词会按遗忘状态重新出现，所有记录只保存在本机。
-        </p>
-      </div>
     </section>
 
     <!-- ============================================================
          3. 答题页
     ============================================================ -->
     <section id="view-quiz" class="view hidden">
-      <div class="flex min-h-screen flex-col px-5 pb-8 pt-7">
-        <header class="flex items-center justify-between">
-          <button id="quiz-back" class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-muted shadow-sm">✕</button>
-          <div class="text-center">
-            <p id="quiz-counter" class="text-xs font-medium text-muted">第 1 题</p>
-            <p id="quiz-mode-label" class="mt-0.5 text-[10px] text-brand-600">定级测试</p>
-          </div>
-          <div class="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-muted shadow-sm" id="quiz-timer">00:00</div>
-        </header>
-
-        <div class="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-brand-100">
-          <div id="quiz-progress" class="h-full rounded-full bg-brand-500 transition-all" style="width: 0%"></div>
-        </div>
-
-        <div class="flex flex-1 flex-col justify-center py-6">
-          <div id="quiz-card" class="fade-in relative rounded-3xl bg-white px-5 py-6 shadow-soft">
-            <!-- ★ 会员/免费 推荐标识（角落小字，由 app.js 按身份切换文案） -->
-            <span id="quiz-reco-label" class="absolute right-4 top-4 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-600">SM2基础复习</span>
-            <span id="quiz-type" class="inline-block rounded-full bg-brand-50 px-3 py-1 text-[11px] font-medium text-brand-700">看英文，选中文</span>
-            <p id="quiz-prompt" class="mt-4 text-3xl font-semibold tracking-tight">word</p>
-            <p id="quiz-phonetic" class="mt-1.5 text-sm text-muted">/.../</p>
-
-            <!-- ★ 新增：图片匹配题配图（仅在图片题显示） -->
-            <div id="quiz-image-wrap" class="mt-4 hidden">
-              <img id="quiz-image" alt="题目配图" class="h-40 w-full rounded-2xl bg-brand-50 object-cover shadow-sm" />
-            </div>
-
-            <div id="quiz-hint" class="mt-4 hidden rounded-2xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-800"></div>
-
-            <div id="quiz-options" class="mt-5 space-y-2.5"></div>
-          </div>
-
-          <div id="quiz-analysis" class="mt-4 hidden rounded-3xl bg-white p-5 shadow-sm">
-            <button id="analysis-toggle" class="flex w-full items-center justify-between">
-              <span id="analysis-verdict" class="text-sm font-semibold">回答正确</span>
-              <span id="analysis-chevron" class="text-xs text-muted">收起 ▲</span>
+      <div class="flex h-screen h-dvh flex-col">
+        <div class="shrink-0 px-5 pt-7">
+          <header class="flex items-center justify-between">
+            <button id="quiz-back" class="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-muted shadow-sm hover:text-ink" aria-label="退出答题">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12"/><path d="M18 6 6 18"/></svg>
             </button>
-            <div id="analysis-body" class="mt-3 space-y-2.5 text-sm">
-              <p><span class="text-muted">词义：</span><span id="analysis-meaning"></span></p>
-              <p><span class="text-muted">助记：</span><span id="analysis-hint"></span></p>
-              <p><span class="text-muted">易混：</span><span id="analysis-confusable"></span></p>
+            <div class="text-center">
+              <p id="quiz-counter" class="text-xs font-medium text-muted">第 1 题</p>
+              <p id="quiz-mode-label" class="mt-0.5 text-[10px] font-medium text-brand-600">定级测试</p>
+            </div>
+            <div class="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-medium text-muted shadow-sm" id="quiz-timer">00:00</div>
+          </header>
+
+          <div class="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-brand-100/80">
+            <div id="quiz-progress" class="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-500 transition-all" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- ★ 中部滚动区：题目卡片 + 解析，独立滚动；新题渲染时由 app.js 滚回顶部 -->
+        <div id="quiz-scroll" class="no-scrollbar min-h-0 flex-1 overflow-y-auto px-5">
+          <div class="flex min-h-full flex-col justify-center py-6">
+            <div id="quiz-card" class="fade-in card relative rounded-3xl px-5 py-6 shadow-soft">
+              <!-- ★ 会员/免费 推荐标识（角落小字，由 app.js 按身份切换文案） -->
+              <span id="quiz-reco-label" class="absolute right-4 top-4 rounded-full border border-line bg-paper px-2 py-0.5 text-[10px] text-muted">基础复习</span>
+              <span id="quiz-type" class="inline-block rounded-full bg-brand-50 px-3 py-1 text-[11px] font-medium text-brand-700">看英文，选中文</span>
+              <p id="quiz-prompt" class="mt-4 text-3xl font-semibold tracking-tight">word</p>
+              <p id="quiz-phonetic" class="mt-1.5 text-sm text-muted">/.../</p>
+
+              <!-- ★ 新增：图片匹配题配图（仅在图片题显示） -->
+              <div id="quiz-image-wrap" class="mt-4 hidden">
+                <img id="quiz-image" alt="题目配图" class="h-40 w-full rounded-2xl border border-line bg-brand-50 object-cover" />
+              </div>
+
+              <div id="quiz-hint" class="mt-4 hidden rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800"></div>
+
+              <div id="quiz-options" class="mt-5 space-y-2.5"></div>
+            </div>
+
+            <div id="quiz-analysis" class="card mt-4 hidden rounded-3xl p-5">
+              <button id="analysis-toggle" class="flex w-full items-center justify-between">
+                <span id="analysis-verdict" class="text-sm font-semibold">回答正确</span>
+                <span id="analysis-chevron" class="text-xs text-muted">收起 ▲</span>
+              </button>
+              <div id="analysis-body" class="mt-3 space-y-2.5 text-sm">
+                <p><span class="text-muted">词义：</span><span id="analysis-meaning"></span></p>
+                <p><span class="text-muted">助记：</span><span id="analysis-hint"></span></p>
+                <p><span class="text-muted">易混：</span><span id="analysis-confusable"></span></p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="space-y-2.5">
-          <button id="btn-hint" class="w-full rounded-2xl border border-brand-200 bg-white py-3 text-sm font-medium text-brand-700">查看提示</button>
-          <button id="btn-submit" class="w-full rounded-2xl bg-brand-600 py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">提交答案</button>
-          <button id="btn-next" class="hidden w-full rounded-2xl bg-ink py-3.5 text-[15px] font-semibold text-white shadow-soft active:scale-[.99]">下一题 →</button>
+        <!-- ★ 底部操作栏：固定在视口底部，答完题不用滚动就能点「下一题」 -->
+        <div class="shrink-0 space-y-2.5 border-t border-line/70 bg-paper px-5 pb-6 pt-3">
+          <button id="btn-hint" class="btn-secondary w-full py-3 text-sm font-medium">查看提示</button>
+          <button id="btn-submit" class="btn-primary hidden w-full py-3.5 text-[15px]">提交答案</button>
+          <button id="btn-next" class="btn-dark hidden w-full py-3.5 text-[15px]">
+            下一题
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+          </button>
         </div>
       </div>
     </section>
@@ -431,12 +429,12 @@
     <section id="view-books" class="view hidden px-5 pb-28 pt-10">
       <header class="mb-5">
         <p class="text-[11px] tracking-wide text-muted">选择与整理</p>
-        <h1 class="mt-1 text-[24px] font-semibold">词书与单词本</h1>
+        <h1 class="mt-1 text-[24px] font-semibold tracking-tight">词书与单词本</h1>
       </header>
 
       <div id="book-chips" class="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"></div>
 
-      <div class="mt-5 grid grid-cols-3 gap-1 rounded-2xl bg-white p-1 shadow-sm">
+      <div class="mt-5 grid grid-cols-3 gap-1 rounded-2xl border border-line bg-slate-100/60 p-1">
         <button id="tab-words" class="rounded-xl bg-brand-600 py-2.5 text-sm font-medium text-white">单词本</button>
         <button id="tab-fav" class="rounded-xl py-2.5 text-sm font-medium text-muted">收藏</button>
         <button id="tab-wrong" class="rounded-xl py-2.5 text-sm font-medium text-muted">错题本</button>
@@ -445,12 +443,11 @@
       <!-- 单词本 -->
       <div id="words-panel" class="mt-4">
         <div class="flex items-center justify-between px-1">
-          <p class="text-xs text-muted"><span id="words-count">0</span> 个单词</p>
+          <p class="text-xs text-muted"><span id="words-count" class="font-num">0</span> 个单词</p>
           <p class="text-[11px] text-muted">标记认识 / 不认识</p>
         </div>
         <!-- ★ 词库扩充后新增：搜索 + 分页，避免上千词一次性渲染卡顿 -->
-        <input id="word-search" type="search" placeholder="搜索单词或释义…"
-          class="mt-2 w-full rounded-2xl border-2 border-brand-100 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-brand-400" />
+        <input id="word-search" type="search" placeholder="搜索单词或释义…" class="input mt-2 py-2.5 text-sm" />
         <div id="word-list" class="mt-2 space-y-2"></div>
         <div id="word-pager" class="mt-3 flex items-center justify-center gap-3 px-1"></div>
       </div>
@@ -458,7 +455,7 @@
       <!-- ★ 收藏夹 -->
       <div id="fav-panel" class="mt-4 hidden">
         <div class="flex items-center justify-between px-1">
-          <p class="text-xs text-muted"><span id="fav-count-books">0</span> 个收藏</p>
+          <p class="text-xs text-muted"><span id="fav-count-books" class="font-num">0</span> 个收藏</p>
           <p class="text-[11px] text-muted">点单词查看详情</p>
         </div>
         <div id="fav-list" class="mt-2 space-y-2"></div>
@@ -467,8 +464,8 @@
       <!-- 错题本 -->
       <div id="wrong-panel" class="mt-4 hidden">
         <div class="flex items-center justify-between gap-3 px-1">
-          <p class="text-xs text-muted"><span id="wrong-count">0</span> 个错词</p>
-          <button id="btn-practice-wrong" class="rounded-full bg-rose-50 px-3.5 py-2 text-xs font-medium text-rose-600">单独刷错题</button>
+          <p class="text-xs text-muted"><span id="wrong-count" class="font-num">0</span> 个错词</p>
+          <button id="btn-practice-wrong" class="rounded-full border border-rose-100 bg-rose-50 px-3.5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-100/70">单独刷错题</button>
         </div>
         <div id="wrong-list" class="mt-2 space-y-2"></div>
       </div>
@@ -481,60 +478,65 @@
       <header class="mb-5 flex items-center justify-between">
         <div>
           <p class="text-[11px] tracking-wide text-muted">我的学习</p>
-          <h1 class="mt-1 text-[24px] font-semibold">数据与设置</h1>
+          <h1 class="mt-1 text-[24px] font-semibold tracking-tight">数据与设置</h1>
         </div>
-        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-base font-semibold text-brand-700" id="me-avatar">词</div>
+        <div class="flex h-12 w-12 items-center justify-center rounded-full border border-brand-100 bg-gradient-to-br from-brand-50 to-white text-base font-semibold text-brand-700 shadow-sm" id="me-avatar">词</div>
       </header>
 
-      <div class="rounded-2xl bg-white p-4 shadow-sm">
+      <div class="card p-4">
         <p id="me-username" class="text-base font-semibold">同学</p>
         <p id="me-account" class="mt-1 text-[11px] text-muted">游客模式 · 记录仅保存在本机</p>
         <!-- ★ 会员时间判断模块：统计页展示会员到期时间 -->
         <p id="me-vip-expire" class="mt-1 text-[11px] text-brand-600"></p>
-        <div class="mt-2 flex gap-2">
-          <span id="me-book" class="rounded-full bg-brand-50 px-3 py-1 text-[11px] text-brand-700">中考</span>
-          <span id="me-level" class="rounded-full bg-brand-50 px-3 py-1 text-[11px] text-brand-700">一般</span>
+        <div class="mt-2.5 flex gap-2">
+          <span id="me-book" class="chip">中考</span>
+          <span id="me-level" class="chip">一般</span>
         </div>
       </div>
 
       <div class="mt-4 grid grid-cols-2 gap-3">
-        <div class="rounded-2xl bg-white p-4 shadow-sm">
+        <div class="card p-4">
           <p class="text-[11px] text-muted">总体正确率</p>
-          <p class="mt-1 text-2xl font-semibold text-brand-700"><span id="stat-accuracy">0</span><span class="ml-0.5 text-xs font-normal text-muted">%</span></p>
+          <p class="mt-1.5 text-[24px] font-semibold leading-none text-brand-700"><span id="stat-accuracy">0</span><span class="ml-0.5 text-xs font-normal text-muted">%</span></p>
         </div>
-        <div class="rounded-2xl bg-white p-4 shadow-sm">
+        <div class="card p-4">
           <p class="text-[11px] text-muted">累计做题</p>
-          <p class="mt-1 text-2xl font-semibold text-ink"><span id="stat-total">0</span><span class="ml-1 text-xs font-normal text-muted">题</span></p>
+          <p class="mt-1.5 text-[24px] font-semibold leading-none text-ink"><span id="stat-total">0</span><span class="ml-1 text-xs font-normal text-muted">题</span></p>
         </div>
-        <div class="rounded-2xl bg-white p-4 shadow-sm">
+        <div class="card p-4">
           <p class="text-[11px] text-muted">错题数量</p>
-          <p class="mt-1 text-2xl font-semibold text-rose-500"><span id="stat-wrong">0</span><span class="ml-1 text-xs font-normal text-muted">个</span></p>
+          <p class="mt-1.5 text-[24px] font-semibold leading-none text-rose-500"><span id="stat-wrong">0</span><span class="ml-1 text-xs font-normal text-muted">个</span></p>
         </div>
-        <div class="rounded-2xl bg-white p-4 shadow-sm">
+        <div class="card p-4">
           <p class="text-[11px] text-muted">已掌握</p>
-          <p class="mt-1 text-2xl font-semibold text-ink"><span id="stat-mastered">0</span><span class="ml-1 text-xs font-normal text-muted">个</span></p>
+          <p class="mt-1.5 text-[24px] font-semibold leading-none text-ink"><span id="stat-mastered">0</span><span class="ml-1 text-xs font-normal text-muted">个</span></p>
         </div>
       </div>
 
-      <!-- ★ 会员专属：KC 维度掌握雷达（释义 / 搭配 / 拼写） -->
-      <div id="kc-radar-card" class="mt-4 rounded-2xl bg-white p-5 shadow-sm">
+      <!-- 记忆分层：按遗忘状态把词分三档（自首页移入数据页） -->
+      <div class="card mt-4 p-5">
         <div class="flex items-baseline justify-between">
-          <h2 class="text-sm font-semibold">KC 维度掌握</h2>
-          <span id="kc-radar-tag" class="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-medium text-white">AI会员</span>
+          <h2 class="text-sm font-semibold">记忆分层</h2>
+          <span class="text-[11px] text-muted">按遗忘状态归档</span>
         </div>
-        <div id="kc-radar-member" class="mt-3">
-          <div id="kc-radar-svg" class="flex justify-center"></div>
-          <div id="kc-radar-legend" class="mt-3 grid grid-cols-3 gap-2"></div>
+        <div id="memory-layer-bar" class="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-paper"></div>
+        <div id="memory-layer-list" class="mt-4 grid grid-cols-3 gap-2"></div>
+      </div>
+
+      <!-- 薄弱雷达：释义 / 搭配 / 完形 / 拼写（自首页移入，全员可见） -->
+      <div class="card mt-4 p-5">
+        <div class="flex items-baseline justify-between">
+          <h2 class="text-sm font-semibold">薄弱雷达</h2>
+          <span class="text-[11px] text-muted">四个维度</span>
         </div>
-        <div id="kc-radar-locked" class="mt-3 hidden rounded-2xl bg-paper p-6 text-center">
-          <p class="text-2xl">🔒</p>
-          <p class="mt-2 text-sm font-medium text-muted">开通会员查看维度分析</p>
-          <button id="btn-open-vip-me" class="mt-3 rounded-xl bg-brand-600 px-4 py-2 text-xs font-medium text-white active:scale-[.98]">立即解锁会员</button>
-        </div>
+        <div id="memory-radar" class="mt-1 flex justify-center"></div>
+        <p id="memory-radar-note" class="mt-1 text-[11px] leading-relaxed text-muted">
+          习题推荐基于你的薄弱和遗忘状态：越靠里，说明这块越需要补。
+        </p>
       </div>
 
       <!-- 记忆档案：自动生成的记忆风格标签 -->
-      <div class="mt-5 rounded-2xl bg-white p-5 shadow-sm">
+      <div class="card mt-5 p-5">
         <div class="flex items-baseline justify-between">
           <h2 class="text-sm font-semibold">记忆档案</h2>
           <span class="text-[11px] text-muted">自动生成</span>
@@ -544,7 +546,7 @@
       </div>
 
       <!-- 记忆收藏墙：多次复测仍然记得的词 -->
-      <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm">
+      <div class="card mt-4 p-5">
         <div class="flex items-baseline justify-between">
           <h2 class="text-sm font-semibold">记忆收藏墙</h2>
           <span id="memory-wall-count" class="text-[11px] text-muted">0 个</span>
@@ -554,35 +556,40 @@
       </div>
 
       <!-- 学习小结：只谈记住了什么，不谈刷了多少题 -->
-      <div class="mt-4 rounded-2xl bg-brand-50 p-5">
+      <div class="mt-4 rounded-2xl border border-brand-100/80 bg-brand-50/70 p-5">
         <h2 class="text-sm font-semibold text-brand-800">学习小结</h2>
         <div id="memory-summary" class="mt-3 space-y-2 text-xs leading-relaxed text-brand-900/80"></div>
         <p class="mt-3 text-[10px] text-brand-700/70">不看刷了多少题，只看今天有多少词真的留住了。</p>
       </div>
 
       <!-- ★ 学习工具：收藏 / 导出 / 协议 / 注销 -->
-      <div class="mt-5 rounded-2xl bg-white p-5 shadow-sm">
+      <div class="card mt-5 p-5">
         <h2 class="text-sm font-semibold">学习工具</h2>
         <div class="mt-3 space-y-2">
-          <button id="btn-go-favorites" class="flex w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-left text-sm">
-            <span>我的收藏</span><span id="me-fav-count" class="text-xs text-muted">0 个 ›</span>
+          <button id="btn-go-favorites" class="flex w-full items-center gap-3 rounded-xl bg-paper px-3.5 py-3 text-left text-sm hover:bg-brand-50/60">
+            <svg class="shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 4 2.3 4.9 5.2.7-3.8 3.7.9 5.2L12 16l-4.6 2.5.9-5.2L4.5 9.6l5.2-.7L12 4z"/></svg>
+            <span class="flex-1">我的收藏</span><span id="me-fav-count" class="text-xs text-muted">0 个 ›</span>
           </button>
-          <button id="btn-export" class="flex w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-left text-sm">
-            <span>导出学习数据</span><span class="text-xs text-muted">JSON ›</span>
+          <button id="btn-export" class="flex w-full items-center gap-3 rounded-xl bg-paper px-3.5 py-3 text-left text-sm hover:bg-brand-50/60">
+            <svg class="shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v9.5"/><path d="m7.8 10 4.2 3.7L16.2 10"/><path d="M5 19.5h14"/></svg>
+            <span class="flex-1">导出学习数据</span><span class="text-xs text-muted">备份 ›</span>
           </button>
-          <button id="btn-privacy" class="flex w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-left text-sm">
-            <span>隐私政策</span><span class="text-xs text-muted">›</span>
+          <button id="btn-privacy" class="flex w-full items-center gap-3 rounded-xl bg-paper px-3.5 py-3 text-left text-sm hover:bg-brand-50/60">
+            <svg class="shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 18.8 6v5.2c0 4.3-2.9 7.4-6.8 9.6-3.9-2.2-6.8-5.3-6.8-9.6V6L12 3.2z"/></svg>
+            <span class="flex-1">隐私政策</span><span class="text-xs text-muted">›</span>
           </button>
-          <button id="btn-terms" class="flex w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-left text-sm">
-            <span>用户协议</span><span class="text-xs text-muted">›</span>
+          <button id="btn-terms" class="flex w-full items-center gap-3 rounded-xl bg-paper px-3.5 py-3 text-left text-sm hover:bg-brand-50/60">
+            <svg class="shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h6.5L18 8v12.5H7V3.5z"/><path d="M13.5 3.5V8H18"/><path d="M10 12.5h5"/><path d="M10 16h5"/></svg>
+            <span class="flex-1">用户协议</span><span class="text-xs text-muted">›</span>
           </button>
-          <button id="btn-delete-account" class="hidden w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-left text-sm text-rose-500">
-            <span>注销账号</span><span class="text-xs text-rose-400">永久删除 ›</span>
+          <button id="btn-delete-account" class="hidden w-full items-center gap-3 rounded-xl bg-paper px-3.5 py-3 text-left text-sm text-rose-500 hover:bg-rose-50">
+            <svg class="shrink-0 text-rose-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"/><path d="M9.5 7V4.8h5V7"/><path d="m6.8 7 .9 13h8.6l.9-13"/><path d="M10.3 11v5.5"/><path d="M13.7 11v5.5"/></svg>
+            <span class="flex-1">注销账号</span><span class="text-xs text-rose-400">永久删除 ›</span>
           </button>
         </div>
       </div>
 
-      <div class="mt-5 rounded-2xl bg-white p-5 shadow-sm">
+      <div class="card mt-5 p-5">
         <h2 class="text-sm font-semibold">设置</h2>
 
         <div class="mt-4 flex items-center justify-between gap-3">
@@ -592,34 +599,34 @@
           </div>
           <div class="flex items-center gap-2">
             <input id="goal-input" type="number" min="5" max="100" step="5"
-              class="w-[72px] rounded-xl border-2 border-brand-100 bg-paper px-3 py-2 text-center text-sm outline-none focus:border-brand-400" />
-            <button id="btn-save-goal" class="rounded-xl bg-brand-600 px-3.5 py-2 text-xs font-medium text-white">保存</button>
+              class="w-[72px] rounded-xl border border-line bg-paper px-3 py-2 text-center text-sm outline-none focus:border-brand-400" />
+            <button id="btn-save-goal" class="rounded-xl bg-brand-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-brand-700">保存</button>
           </div>
         </div>
 
-        <div class="mt-4 space-y-2 border-t border-slate-100 pt-4">
-          <button id="btn-reset" class="flex w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-sm">
+        <div class="mt-4 space-y-2 border-t border-line pt-4">
+          <button id="btn-reset" class="flex w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-sm hover:bg-slate-100/70">
             <span>重置学习记录</span><span class="text-xs text-muted">清空记录 ›</span>
           </button>
-          <button id="btn-logout" class="flex w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-sm text-rose-500">
+          <button id="btn-logout" class="flex w-full items-center justify-between rounded-xl bg-paper px-3.5 py-3 text-sm text-rose-500 hover:bg-rose-50">
             <span>退出登录</span><span class="text-xs text-rose-400">›</span>
           </button>
         </div>
       </div>
 
-      <p class="mt-6 text-center text-[10px] leading-relaxed text-muted">
+      <p id="me-data-note" class="mt-6 text-center text-[10px] leading-relaxed text-muted">
         学习数据保存在本机<br />登录账号后支持多端同步
       </p>
     </section>
 
     <!-- 游客常驻轻提示：点击可直接去登录 -->
-    <button id="guest-hint" class="fixed right-[max(12px,calc(50%-218px))] top-3 z-40 hidden items-center gap-1.5 rounded-full border border-brand-100 bg-white/95 px-3 py-1.5 text-[10px] text-brand-700 shadow-sm backdrop-blur">
+    <button id="guest-hint" class="fixed right-[max(12px,calc(50%-218px))] top-3 z-40 hidden items-center gap-1.5 rounded-full border border-line bg-white/95 px-3 py-1.5 text-[10px] text-brand-700 shadow-sm backdrop-blur hover:border-brand-300">
       <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
       登录账号可多端同步学习记录
     </button>
 
     <!-- 底部 Tab 栏 -->
-    <nav id="tabbar" class="tabbar fixed bottom-0 left-1/2 z-40 hidden w-full max-w-[460px] -translate-x-1/2 border-t border-brand-100 bg-white/95 px-2 pt-1.5 backdrop-blur">
+    <nav id="tabbar" class="tabbar fixed bottom-0 left-1/2 z-40 hidden w-full max-w-[460px] -translate-x-1/2 border-t border-line bg-white/90 px-2 pt-1.5 backdrop-blur">
       <div class="grid grid-cols-4">
         <button data-nav="home" class="tab-btn flex flex-col items-center gap-1 py-2 text-[10px] text-muted">
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
@@ -641,58 +648,79 @@
     </nav>
   </div>
 
-  <!-- ★ 会员介绍弹窗：免费/会员对比 + 开通入口 -->
-  <div id="vip-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/40 px-6">
-    <div class="w-full max-w-[340px] rounded-3xl bg-white p-5 shadow-soft">
+  <!-- ★ 会员介绍弹窗：免费/会员对比 + 看广告领取入口（无支付） -->
+  <div id="vip-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-ink/45 px-6 backdrop-blur-[2px]">
+    <div class="modal-panel w-full max-w-[340px] rounded-3xl border border-line bg-white p-5 shadow-pop">
       <div class="flex items-center justify-between">
-        <h2 class="text-base font-semibold">解锁 AI 精准复习</h2>
-        <button id="vip-close" class="text-xs text-muted">✕</button>
+        <h2 class="text-base font-semibold">解锁词溯精准复习</h2>
+        <button id="vip-close" class="icon-btn -mr-1.5 -mt-1.5 h-8 w-8" aria-label="关闭">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12"/><path d="M18 6 6 18"/></svg>
+        </button>
       </div>
-      <div class="mt-4 space-y-2.5 text-xs leading-relaxed text-ink">
-        <p>✅ 免费版：SM2 间隔复习，按单词整体复习</p>
-        <p>✅ 会员进阶：拆分词义 / 搭配 / 拼写薄弱点，AI 计算记忆收益，靶向攻克薄弱维度，减少无效刷题</p>
-        <p class="text-brand-700">🎁 新用户注册即赠 5 个月 AI 会员（到期自动回到免费 SM2）</p>
+      <div class="mt-4 space-y-3 text-xs leading-relaxed text-ink">
+        <div class="flex gap-2.5">
+          <span class="mt-0.5 shrink-0 text-muted">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.4 2.4 2.4 4.6-5"/></svg>
+          </span>
+          <p><span class="font-medium">免费版</span>：智能间隔复习，按单词整体安排复习</p>
+        </div>
+        <div class="flex gap-2.5">
+          <span class="mt-0.5 shrink-0 text-brand-600">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.4 2.4 2.4 4.6-5"/></svg>
+          </span>
+          <p><span class="font-medium">会员进阶</span>：拆分词义 / 搭配 / 拼写薄弱点，按遗忘规律精准推题，靶向攻克薄弱维度，减少无效刷题</p>
+        </div>
+        <div class="flex gap-2.5 rounded-xl border border-brand-100 bg-brand-50/70 p-3">
+          <span class="mt-0.5 shrink-0 text-brand-600">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7.5 5v14"/><path d="M16.5 5v14"/><path d="M3 9.5h4.5"/><path d="M3 14.5h4.5"/><path d="M16.5 9.5H21"/><path d="M16.5 14.5H21"/></svg>
+          </span>
+          <p class="text-brand-800">词溯会员只能通过看广告领取：每次 3 天，每天最多 3 次（到期自动回到免费基础复习）</p>
+        </div>
       </div>
-      <button id="btn-activate-vip" class="mt-5 w-full rounded-2xl bg-brand-600 py-3 text-sm font-semibold text-white shadow-soft active:scale-[.99]">立即开通会员</button>
-      <p class="mt-2 text-center text-[10px] leading-relaxed text-muted">体验版：点击即开通，不产生真实支付</p>
+      <button id="btn-vip-reward" class="btn-primary mt-5 w-full py-3 text-sm">看广告领 3 天会员</button>
     </div>
   </div>
 
-  <!-- ★ 广告奖励弹窗：模拟激励视频（后续替换为真实广告 SDK 播放） -->
-  <div id="ad-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/50 px-6">
-    <div class="w-full max-w-[320px] overflow-hidden rounded-3xl bg-white shadow-soft">
+  <!-- ★ 广告奖励弹窗：由 js/ads.js 按服务端配置加载国际广告 -->
+  <div id="ad-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-ink/55 px-6 backdrop-blur-[2px]">
+    <div class="modal-panel w-full max-w-[320px] overflow-hidden rounded-3xl border border-line bg-white shadow-pop">
       <div class="relative flex h-44 items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
-        <span class="text-5xl">🎬</span>
-        <span class="absolute left-3 top-3 rounded-full bg-black/40 px-2.5 py-1 text-[10px] text-white">激励视频</span>
-        <span id="ad-countdown" class="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-ink">5s</span>
+        <span class="text-slate-500">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7.5 5v14"/><path d="M16.5 5v14"/><path d="M3 9.5h4.5"/><path d="M3 14.5h4.5"/><path d="M16.5 9.5H21"/><path d="M16.5 14.5H21"/></svg>
+        </span>
+        <span class="absolute left-3 top-3 rounded-full bg-black/35 px-2.5 py-1 text-[10px] text-white/90">激励视频</span>
+        <span id="ad-countdown" class="font-num absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-ink">5s</span>
+        <div id="ad-slot" class="absolute inset-0 hidden items-center justify-center"></div>
       </div>
       <div class="p-4">
-        <p class="text-sm font-semibold">看完即可领取 3 天 AI 会员</p>
+        <p class="text-sm font-semibold">看完即可领取 3 天词溯会员</p>
         <p id="ad-tip" class="mt-1 text-[11px] leading-relaxed text-muted">广告播放中，请稍候…</p>
         <button id="ad-claim" class="mt-4 w-full rounded-2xl bg-slate-300 py-3 text-sm font-semibold text-white" disabled>领取会员</button>
-        <button id="ad-close" class="mt-2 w-full py-2 text-[11px] text-muted">关闭</button>
+        <button id="ad-close" class="mt-2 w-full py-2 text-[11px] text-muted hover:text-ink">关闭</button>
       </div>
     </div>
   </div>
 
-  <div id="logout-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/40 px-6">
-    <div class="w-full max-w-[340px] rounded-3xl bg-white p-5 shadow-soft">
+  <div id="logout-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-ink/45 px-6 backdrop-blur-[2px]">
+    <div class="modal-panel w-full max-w-[340px] rounded-3xl border border-line bg-white p-5 shadow-pop">
       <h2 class="text-base font-semibold">退出登录</h2>
-      <p class="mt-1 text-xs leading-relaxed text-muted">本机的学习记录要保留吗？保留后会以游客身份继续使用。</p>
+      <p class="mt-1.5 text-xs leading-relaxed text-muted">本机的学习记录要保留吗？保留后会以游客身份继续使用。</p>
       <div class="mt-4 space-y-2">
-        <button id="logout-keep" class="w-full rounded-2xl bg-brand-600 py-3 text-sm font-semibold text-white">保留本地记录退出</button>
-        <button id="logout-clear" class="w-full rounded-2xl border-2 border-rose-100 py-3 text-sm font-medium text-rose-500">清空本地记录退出</button>
-        <button id="logout-cancel" class="w-full py-2 text-xs text-muted">取消</button>
+        <button id="logout-keep" class="btn-primary w-full py-3 text-sm">保留本地记录退出</button>
+        <button id="logout-clear" class="w-full rounded-2xl border border-rose-200 bg-rose-50/50 py-3 text-sm font-medium text-rose-600 hover:bg-rose-50">清空本地记录退出</button>
+        <button id="logout-cancel" class="w-full py-2 text-xs text-muted hover:text-ink">取消</button>
       </div>
     </div>
   </div>
 
   <!-- ★ 学习周报弹层：近 7 天做题量 / 正确率 -->
-  <div id="weekly-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/40 px-6">
-    <div class="w-full max-w-[340px] rounded-3xl bg-white p-5 shadow-soft">
+  <div id="weekly-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-ink/45 px-6 backdrop-blur-[2px]">
+    <div class="modal-panel w-full max-w-[340px] rounded-3xl border border-line bg-white p-5 shadow-pop">
       <div class="flex items-center justify-between">
         <h2 class="text-base font-semibold">学习周报 · 近 7 天</h2>
-        <button id="weekly-close" class="text-xs text-muted">✕</button>
+        <button id="weekly-close" class="icon-btn -mr-1.5 -mt-1.5 h-8 w-8" aria-label="关闭">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12"/><path d="M18 6 6 18"/></svg>
+        </button>
       </div>
       <div id="weekly-summary" class="mt-4 grid grid-cols-3 gap-2"></div>
       <div id="weekly-list" class="mt-4 space-y-1.5"></div>
@@ -701,17 +729,22 @@
   </div>
 
   <!-- ★ 单词详情弹层 -->
-  <div id="word-modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-ink/40 px-0 sm:items-center sm:px-6">
-    <div class="w-full max-w-[460px] rounded-t-3xl bg-white p-5 pb-8 shadow-soft sm:rounded-3xl">
+  <div id="word-modal" class="modal fixed inset-0 z-50 hidden items-end justify-center bg-ink/45 px-0 backdrop-blur-[2px] sm:items-center sm:px-6">
+    <div class="modal-panel w-full max-w-[460px] rounded-t-3xl border border-line bg-white p-5 pb-8 shadow-pop sm:rounded-3xl">
+      <div class="mx-auto mb-3 h-1 w-9 rounded-full bg-slate-200 sm:hidden"></div>
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <p id="word-title" class="truncate text-2xl font-semibold">word</p>
+          <p id="word-title" class="truncate text-2xl font-semibold tracking-tight">word</p>
           <p id="word-phonetic" class="mt-1 text-sm text-muted">/.../</p>
         </div>
         <div class="flex shrink-0 items-center gap-2">
-          <button id="word-speak" class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-sm" title="朗读">🔊</button>
-          <button id="word-fav" class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-base" title="收藏">☆</button>
-          <button id="word-close" class="flex h-9 w-9 items-center justify-center rounded-full bg-paper text-xs text-muted">✕</button>
+          <button id="word-speak" class="flex h-9 w-9 items-center justify-center rounded-full border border-brand-100 bg-brand-50 text-brand-700 hover:bg-brand-100" title="朗读">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 5.5 7 9H4v6h3l4.5 3.5v-13z"/><path d="M15 9.2a4.3 4.3 0 0 1 0 5.6"/><path d="M17.7 6.8a8 8 0 0 1 0 10.4"/></svg>
+          </button>
+          <button id="word-fav" class="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-paper text-base" title="收藏">☆</button>
+          <button id="word-close" class="icon-btn h-9 w-9 border border-line bg-white" aria-label="关闭">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12"/><path d="M18 6 6 18"/></svg>
+          </button>
         </div>
       </div>
       <div class="mt-4 space-y-2.5 text-sm">
@@ -721,42 +754,45 @@
         <p id="word-conf-row" class="hidden"><span class="text-muted">易混：</span><span id="word-confusable"></span></p>
       </div>
       <div class="mt-5 flex gap-2">
-        <button id="word-known" class="flex-1 rounded-xl bg-emerald-500 py-2.5 text-xs font-medium text-white">标记认识</button>
-        <button id="word-unknown" class="flex-1 rounded-xl bg-rose-400 py-2.5 text-xs font-medium text-white">标记不认识</button>
+        <button id="word-known" class="flex-1 rounded-xl bg-emerald-500 py-2.5 text-xs font-medium text-white hover:bg-emerald-600">标记认识</button>
+        <button id="word-unknown" class="flex-1 rounded-xl bg-rose-400 py-2.5 text-xs font-medium text-white hover:bg-rose-500">标记不认识</button>
       </div>
     </div>
   </div>
 
   <!-- ★ 隐私政策 / 用户协议弹层 -->
-  <div id="legal-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/40 px-5">
-    <div class="flex max-h-[80vh] w-full max-w-[360px] flex-col rounded-3xl bg-white p-5 shadow-soft">
+  <div id="legal-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-ink/45 px-5 backdrop-blur-[2px]">
+    <div class="modal-panel flex max-h-[80vh] w-full max-w-[360px] flex-col rounded-3xl border border-line bg-white p-5 shadow-pop">
       <div class="flex items-center justify-between">
         <h2 id="legal-title" class="text-base font-semibold">隐私政策</h2>
-        <button id="legal-close" class="text-xs text-muted">✕</button>
+        <button id="legal-close" class="icon-btn -mr-1.5 -mt-1.5 h-8 w-8" aria-label="关闭">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12"/><path d="M18 6 6 18"/></svg>
+        </button>
       </div>
       <div id="legal-body" class="no-scrollbar mt-3 flex-1 space-y-2 overflow-y-auto text-[11px] leading-relaxed text-slate-600"></div>
     </div>
   </div>
 
   <!-- ★ 注销账号二次确认 -->
-  <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/40 px-6">
-    <div class="w-full max-w-[340px] rounded-3xl bg-white p-5 shadow-soft">
+  <div id="delete-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center bg-ink/45 px-6 backdrop-blur-[2px]">
+    <div class="modal-panel w-full max-w-[340px] rounded-3xl border border-line bg-white p-5 shadow-pop">
       <h2 class="text-base font-semibold text-rose-600">注销账号</h2>
       <p class="mt-2 text-xs leading-relaxed text-muted">注销后会删除账号、作答记录、学习进度与会员权益，且无法恢复；本机数据也会一并清空。</p>
-      <p class="mt-2 rounded-xl bg-rose-50 p-3 text-[11px] leading-relaxed text-rose-600">建议先在「学习工具」里导出学习数据。确认注销后不可撤销。</p>
+      <p class="mt-2 rounded-xl border border-rose-100 bg-rose-50 p-3 text-[11px] leading-relaxed text-rose-600">建议先在「学习工具」里导出学习数据。确认注销后不可撤销。</p>
       <div class="mt-4 space-y-2">
-        <button id="delete-confirm" class="w-full rounded-2xl bg-rose-500 py-3 text-sm font-semibold text-white">确认注销</button>
-        <button id="delete-cancel" class="w-full py-2 text-xs text-muted">取消</button>
+        <button id="delete-confirm" class="w-full rounded-2xl bg-rose-500 py-3 text-sm font-semibold text-white hover:bg-rose-600">确认注销</button>
+        <button id="delete-cancel" class="w-full py-2 text-xs text-muted hover:text-ink">取消</button>
       </div>
     </div>
   </div>
 
-  <div id="toast" class="pointer-events-none fixed left-1/2 top-6 z-50 hidden -translate-x-1/2 rounded-full bg-ink/90 px-4 py-2 text-xs text-white shadow-lg"></div>
+  <div id="toast" class="pointer-events-none fixed left-1/2 top-6 z-50 hidden -translate-x-1/2 rounded-full bg-ink/90 px-4 py-2 text-xs text-white shadow-pop backdrop-blur"></div>
 
-  <script src="js/data.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/memory.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/data.js?v=20261121"></script>
+  <script src="js/store.js?v=20261121"></script>
+  <script src="js/api.js?v=20261121"></script>
+  <script src="js/ads.js?v=20261121"></script>
+  <script src="js/memory.js?v=20261121"></script>
+  <script src="js/app.js?v=20261121"></script>
 </body>
 </html>

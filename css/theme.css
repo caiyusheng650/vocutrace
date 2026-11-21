@@ -1,0 +1,270 @@
+/* ============================================================
+   词溯 · 设计系统 theme.css
+   低饱和青绿 × 深灰文本 × 柔和中性阴影
+   —— 所有视图 / 弹层共用同一套令牌与组件样式
+   ============================================================ */
+
+:root {
+  --brand-50: #f4faf8;
+  --brand-100: #e3f1ec;
+  --brand-200: #c7e3da;
+  --brand-300: #9dcdc1;
+  --brand-400: #64b4a4;
+  --brand-500: #22ab98;
+  --brand-600: #158a7c;
+  --brand-700: #136f64;
+  --brand-800: #12584f;
+  --ink: #2b3534;
+  --muted: #7b918d;
+  --paper: #f7f9f8;
+  --line: #e4e9e7;
+
+  --shadow-sm: 0 1px 2px rgba(28, 44, 40, 0.05), 0 2px 8px -2px rgba(28, 44, 40, 0.06);
+  --shadow-card: 0 1px 2px rgba(28, 44, 40, 0.04), 0 10px 24px -14px rgba(28, 44, 40, 0.14);
+  --shadow-soft: 0 2px 6px -2px rgba(28, 44, 40, 0.06), 0 18px 36px -18px rgba(28, 44, 40, 0.2);
+  --shadow-pop: 0 2px 8px rgba(28, 44, 40, 0.06), 0 30px 60px -22px rgba(28, 44, 40, 0.3);
+
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-panel: 24px;
+
+  --font-num: "Bahnschrift", "DIN Alternate", "Avenir Next", "Helvetica Neue",
+    "Segoe UI", system-ui, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  background:
+    radial-gradient(1100px 480px at 50% -6%, rgba(34, 171, 152, 0.08), transparent 62%),
+    #e7ecea;
+  overscroll-behavior-y: none;
+  letter-spacing: 0.01em;
+}
+
+/* ---------------- 数字展示字体（打卡 / 正确率 / 计时等） ---------------- */
+.font-num,
+#home-new, #home-review, #home-mastered, #home-accuracy,
+#home-progress-text, #checkin-streak, #quiz-timer,
+#stat-accuracy, #stat-total, #stat-wrong, #stat-mastered {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ---------------- 通用交互 ---------------- */
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled) {
+  transition: background-color 0.16s ease, color 0.16s ease,
+    border-color 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease,
+    transform 0.12s ease;
+}
+button:not(:disabled):active {
+  transform: scale(0.98);
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 171, 152, 0.2);
+}
+input:focus, select:focus {
+  border-color: var(--brand-400);
+  box-shadow: 0 0 0 3px rgba(34, 171, 152, 0.12);
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.tabbar { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* 答题选项（.opt-btn 由 app.js 动态生成，此处统一手感） */
+.opt-btn {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, border-color 0.16s ease,
+    background-color 0.16s ease, box-shadow 0.16s ease;
+}
+.opt-btn:active { transform: scale(0.985); }
+#quiz-options button.border-slate-200:not(:disabled):hover {
+  border-color: var(--brand-300);
+  background: #fbfdfc;
+}
+
+/* 列表卡片（单词本 / 错题本 / 收藏，均为 [data-open-word]） */
+[data-open-word] {
+  border: 1px solid transparent;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+[data-open-word]:hover {
+  border-color: var(--line);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-btn svg { transition: transform 0.18s ease; }
+.tab-btn:active svg { transform: scale(0.9); }
+
+/* ---------------- 组件基元 ----------------
+   普通类选择器 (0,1,0)：压过 Tailwind preflight 的 button/* 重置；
+   Tailwind 运行时样式表在 theme.css 之后注入，同特异性时工具类仍可覆盖 */
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--brand-100);
+  background: var(--brand-50);
+  padding: 5px 12px;
+  font-size: 11px;
+  color: var(--brand-700);
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: var(--radius-control);
+  padding: 13px 16px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease,
+    background-color 0.16s ease;
+}
+.input:focus {
+  background: #fff;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--brand-600);
+  color: #fff;
+  border-radius: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+}
+.btn-primary:hover { background: var(--brand-700); }
+
+.btn-dark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+}
+.btn-dark:hover { background: #37423f; }
+
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 14px;
+  font-weight: 600;
+}
+.btn-secondary:hover {
+  border-color: var(--brand-300);
+  color: var(--brand-700);
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+}
+.icon-btn:hover {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------------- 视图切换 / 入场动效 ---------------- */
+.view { min-height: 100vh; }
+.view:not(.hidden) {
+  animation: view-in 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes view-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.fade-in { animation: fade-in 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 弹层：遮罩淡入 + 面板上浮（.modal / .modal-panel 为约定类名） */
+.modal:not(.hidden) { animation: overlay-in 0.2s ease both; }
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal:not(.hidden) .modal-panel {
+  animation: panel-in 0.26s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.975); }
+  to { opacity: 1; transform: none; }
+}
+
+#toast:not(.hidden) { animation: toast-in 0.22s ease both; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---------------- JS 内联配色的降饱和修正 ----------------
+   memory.js 对记忆分层写死了 #22ab98 / #f5c451 / #f87171，
+   这里按固定顺序覆写为低饱和版本（不改 JS）。 */
+#memory-layer-bar > div:not(:only-child):nth-child(1) { background: #2fa593 !important; }
+#memory-layer-bar > div:not(:only-child):nth-child(2) { background: #cfa95e !important; }
+#memory-layer-bar > div:not(:only-child):nth-child(3) { background: #c98b8b !important; }
+
+#memory-layer-list > div:nth-child(1) span[style] { background: #2fa593 !important; }
+#memory-layer-list > div:nth-child(1) p[style] { color: #136f64 !important; }
+#memory-layer-list > div:nth-child(2) span[style] { background: #cfa95e !important; }
+#memory-layer-list > div:nth-child(2) p[style] { color: #967337 !important; }
+#memory-layer-list > div:nth-child(3) span[style] { background: #c98b8b !important; }
+#memory-layer-list > div:nth-child(3) p[style] { color: #914e4e !important; }
+
+/* 首页今日任务卡：给 JS 生成的白色进度条一点层次 */
+#home-progress-bar { box-shadow: 0 0 8px rgba(255, 255, 255, 0.35); }
+
+/* ---------------- 减少动态偏好 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

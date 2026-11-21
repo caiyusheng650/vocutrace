@@ -47,6 +47,7 @@ const MockAPI = (() => {
   const TOKEN_KEY = 'cishuo:token';
   const API_BASE_KEY = 'cishuo:api-base';
   const QUOTA_CACHE_KEY = 'cishuo:ad-quota';
+  const DEFAULT_LOCAL_BASE = 'http://127.0.0.1:8787';
 
   function normalizeBase(value) {
     return String(value || '').trim().replace(/\/+$/, '');
@@ -69,15 +70,25 @@ const MockAPI = (() => {
     if (base) return base;
     try {
       const host = location.hostname;
-      if (host === 'localhost' || host === '127.0.0.1') return 'http://127.0.0.1:8787';
+      if (host === 'localhost' || host === '127.0.0.1') return DEFAULT_LOCAL_BASE;
     } catch (err) {
       /* file:// 等无 location.hostname 的场景保持 mock */
     }
     return '';
   }
 
-  const API_BASE = resolveApiBase();
+  let API_BASE = resolveApiBase();
   const USE_REMOTE = !!API_BASE;
+
+  /* 是否为本机地址（用于识别失效的临时 ?api= 端口） */
+  function isLocalBase(base) {
+    try {
+      const host = new URL(base).hostname;
+      return host === 'localhost' || host === '127.0.0.1';
+    } catch (err) {
+      return false;
+    }
+  }
 
   function getToken() {
     try {
@@ -128,8 +139,9 @@ const MockAPI = (() => {
     if (body !== null) headers['Content-Type'] = 'application/json';
     const token = getToken();
     if (auth && token) headers.Authorization = `Bearer ${token}`;
-    try {
-      const res = await fetch(`${API_BASE}${path}`, {
+
+    async function request(base) {
+      const res = await fetch(`${base}${path}`, {
         method,
         headers,
         body: body !== null ? JSON.stringify(body) : undefined,
@@ -142,8 +154,22 @@ const MockAPI = (() => {
       }
       if (res.status === 401 && auth) setToken(null);
       return { ...data, status: res.status, ok: !!data.ok };
+    }
+
+    try {
+      return await request(API_BASE);
     } catch (err) {
-      return { ok: false, status: 0, error: '无法连接后端，请确认 server 已启动' };
+      // 之前用 ?api= 指到过的本机端口已失效时，自动回退到默认 8787
+      if (API_BASE !== DEFAULT_LOCAL_BASE && isLocalBase(API_BASE)) {
+        API_BASE = DEFAULT_LOCAL_BASE;
+        try { localStorage.setItem(API_BASE_KEY, DEFAULT_LOCAL_BASE); } catch (e) { /* ignore */ }
+        try {
+          return await request(API_BASE);
+        } catch (e) {
+          /* 继续走统一错误提示 */
+        }
+      }
+      return { ok: false, status: 0, error: '无法连接后端，请确认 server 已启动（http://127.0.0.1:8787）' };
     }
   }
 
@@ -723,28 +749,19 @@ const MockAPI = (() => {
    * ============================================================ */
 
   const ACCOUNT_DB_KEY = 'cishuo:accounts';  // mock 账号库（真实环境应存在服务端）
-  const WECHAT_ID_KEY = 'cishuo:wx-openid';  // mock 微信 openid（真实环境由 OAuth 回调返回）
 
   /* ============================================================
    * ★ 会员时间判断模块（mock）
    * ------------------------------------------------------------
    * 规则：
    *  - 游客：不赠送会员；
-   *  - 手机号首次注册：赠送 5 个月，写入 vipExpireTime；
-   *  - 老账号 / 已有会员记录：不重复赠送；
+   *  - 邮箱注册：不赠送会员，会员只能通过看广告领取；
    *  - 判断标准：当前时间 < vipExpireTime 才算会员，到期自动回落到免费 SM2。
    * 真实后端：vip / vipExpireTime 应由服务端返回，前端只读不写。
    * ============================================================ */
-  const VIP_MONTHS = 5;
   /* ★ 广告奖励：每次看广告领 3 天会员，每日最多 3 次（防刷） */
   const VIP_AD_REWARD_DAYS = 3;
   const VIP_AD_DAILY_LIMIT = 3;
-
-  function addMonths(ts, months) {
-    const d = new Date(ts);
-    d.setMonth(d.getMonth() + months);
-    return d.getTime();
-  }
 
   function addDays(ts, days) {
     return ts + days * 86400000;
@@ -775,36 +792,53 @@ const MockAPI = (() => {
     }
   }
 
-  /* ★ 发送验证码：真实后端模式下由服务端下发，未配置后端时直接通过 */
-  async function requestSmsCode(phone) {
+  /* 公开配置：广告平台 / 广告位（未接后端时返回 mock 配置） */
+  async function getPublicConfig() {
     if (USE_REMOTE) {
-      const res = await apiFetch('/api/auth/sms-code', {
+      const res = await apiFetch('/api/config', { auth: false });
+      if (res.ok && res.ad) return res.ad;
+    }
+    return {
+      provider: 'mock',
+      scriptUrl: '',
+      adUnitId: '',
+      rewardDays: VIP_AD_REWARD_DAYS,
+      dailyLimit: VIP_AD_DAILY_LIMIT,
+    };
+  }
+
+  /* ★ 发送邮箱验证码：真实后端模式下由服务端发信，未配置后端时直接通过 */
+  async function requestEmailCode(email) {
+    if (USE_REMOTE) {
+      const res = await apiFetch('/api/auth/email-code', {
         method: 'POST',
-        body: { phone },
+        body: { email },
         auth: false,
       });
       if (!res.ok) return { ok: false, error: res.error || '验证码发送失败' };
-      return { ok: true };
+      // 未配置 SMTP 时服务端会回传验证码，方便本地调试
+      return { ok: true, devCode: res.code || null };
     }
     await delay(60, 120);
     return { ok: true };
   }
 
-  /* 手机号验证码登录：新号自动注册，老号直接登录
-   * 真实后端：POST /api/auth/login-by-phone { phone, code } → { token, user }
+  /* 邮箱验证码登录：新邮箱自动注册，老账号直接登录
+   * 真实后端：POST /api/auth/login-by-email { email, code } → { token, user }
    */
-  async function loginByPhone(phone, code) {
+  async function loginByEmail(email, code) {
     await delay(200, 400);
 
-    if (!/^1\d{10}$/.test(phone)) return { ok: false, error: '请输入 11 位手机号' };
-    // ★ mock 验证码：任意 6 位数字都算通过（真实后端应校验短信验证码）
+    const address = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return { ok: false, error: '请输入正确的邮箱地址' };
+    // ★ mock 验证码：任意 6 位数字都算通过（真实后端应校验邮件验证码）
     if (!/^\d{6}$/.test(code)) return { ok: false, error: '请输入 6 位验证码' };
 
-    // ★ 真实后端：手机号登录（新号由服务端赠送会员并落库）
+    // ★ 真实后端：邮箱登录（不发会员，会员只通过广告领取）
     if (USE_REMOTE) {
-      const res = await apiFetch('/api/auth/login-by-phone', {
+      const res = await apiFetch('/api/auth/login-by-email', {
         method: 'POST',
-        body: { phone, code },
+        body: { email: address, code },
         auth: false,
       });
       if (!res.ok) return { ok: false, error: res.error || '登录失败' };
@@ -816,121 +850,33 @@ const MockAPI = (() => {
         user,
         vip: !!res.vip,
         vipExpireTime: res.vipExpireTime || null,
-        vipGranted: !!res.vipGranted,
       };
     }
 
     const accounts = readAccounts();
-    const existing = accounts[phone];
+    const existing = accounts[address];
     const isNew = !existing;
-
-    // ★ 会员赠送规则：仅「手机号首次注册」赠送 5 个月；老账号不重复赠送
     const account = existing || {
-      phone,
+      email: address,
       createdAt: Date.now(),
-      vipExpireTime: addMonths(Date.now(), VIP_MONTHS),
-      vipGrantedAt: Date.now(),
+      vipExpireTime: null,
     };
-    accounts[phone] = account;
+    accounts[address] = account;
     writeAccounts(accounts);
 
     const vip = isVipActive({ vip: true, loggedIn: true, guest: false, vipExpireTime: account.vipExpireTime });
 
     const user = Store.saveUser({
-      username: account.nickname || `用户${phone.slice(-4)}`,
-      phone,
-      wechat: false,
-      wechatOpenId: null,
+      username: account.nickname || address.split('@')[0].slice(0, 12) || '同学',
+      email: address,
       guest: false,
       loggedIn: true,
-      authMode: 'phone',
+      authMode: 'email',
       vip,
       vipExpireTime: account.vipExpireTime || null,
-      vipGrantedAt: account.vipGrantedAt || null,
     });
 
-    return { ok: true, isNew, user, vip, vipExpireTime: account.vipExpireTime || null, vipGranted: isNew };
-  }
-
-  /* 微信一键登录
-   * ★ 真实对接：前端跳转微信 OAuth 授权页 → 回调 code → 后端换 openid / 用户信息。
-   *   现在用本机固定的伪 openid 模拟同一个微信账号，直接登录成功。
-   */
-  async function loginByWechat() {
-    await delay(400, 700);
-
-    // ★ 真实后端：用本机固定伪 openid 走服务端登录（真实环境换成 OAuth code）
-    if (USE_REMOTE) {
-      let wxOpenId = null;
-      try {
-        wxOpenId = localStorage.getItem(WECHAT_ID_KEY);
-        if (!wxOpenId) {
-          wxOpenId = `wx_mock_${Math.random().toString(36).slice(2, 10)}`;
-          localStorage.setItem(WECHAT_ID_KEY, wxOpenId);
-        }
-      } catch (err) {
-        wxOpenId = 'wx_mock_guest';
-      }
-      const res = await apiFetch('/api/auth/wechat', {
-        method: 'POST',
-        body: { openid: wxOpenId },
-        auth: false,
-      });
-      if (!res.ok) return { ok: false, error: res.error || '微信登录失败' };
-      setToken(res.token);
-      const user = Store.saveUser({ ...res.user, wechatOpenId: wxOpenId, guest: false, loggedIn: true });
-      return {
-        ok: true,
-        isNew: !!res.isNew,
-        user,
-        vip: !!res.vip,
-        vipExpireTime: res.vipExpireTime || null,
-      };
-    }
-
-    let openId = null;
-    let isNew = false;
-    let account = null;
-    try {
-      openId = localStorage.getItem(WECHAT_ID_KEY);
-      if (!openId) {
-        openId = 'wx_mock_' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem(WECHAT_ID_KEY, openId);
-      }
-
-      // ★ 微信账号同样走「首次注册赠送 5 个月」，已有记录不重复赠送
-      const accounts = readAccounts();
-      const key = `wx_${openId}`;
-      isNew = !accounts[key];
-      account = accounts[key] || {
-        openId,
-        createdAt: Date.now(),
-        vipExpireTime: addMonths(Date.now(), VIP_MONTHS),
-        vipGrantedAt: Date.now(),
-      };
-      accounts[key] = account;
-      writeAccounts(accounts);
-    } catch (err) {
-      openId = 'wx_mock_guest';
-      account = { vipExpireTime: null };
-    }
-
-    const vip = isVipActive({ vip: true, loggedIn: true, guest: false, vipExpireTime: account && account.vipExpireTime });
-
-    const user = Store.saveUser({
-      username: `微信用户${String(openId).slice(-4)}`,
-      phone: null,
-      wechat: true,
-      wechatOpenId: openId,
-      guest: false,
-      loggedIn: true,
-      authMode: 'wechat',
-      vip,
-      vipExpireTime: (account && account.vipExpireTime) || null,
-      vipGrantedAt: (account && account.vipGrantedAt) || null,
-    });
-
-    return { ok: true, isNew, user, vip, vipExpireTime: user.vipExpireTime };
+    return { ok: true, isNew, user, vip, vipExpireTime: account.vipExpireTime || null };
   }
 
   /* 游客升级：把本机已有做题记录 / 掌握标记 / 定级结果同步到账号下
@@ -1014,7 +960,7 @@ const MockAPI = (() => {
    * ------------------------------------------------------------
    * 免费版：calcSM2 —— 只追踪单词整体掌握，按间隔复习，不拆 KC、不打分。
    * 会员版：calcKCAndScore —— 每题绑定 KC，按 KC 掌握度 + 遗忘/疲劳/难度差算收益分。
-   * 后端对接建议：getUserVipStatus / activateVip 换成 fetch；
+   * 后端对接建议：getUserVipStatus 换成 fetch；
    *   calcSM2 / calcKCAndScore / updateFatigue 是纯计算，可整体搬到服务端，
    *   前端只拿「排序后的下一题」，避免评分逻辑被篡改。
    * ============================================================ */
@@ -1205,50 +1151,16 @@ const MockAPI = (() => {
     return { ok: true, vip: active, expireAt, expired: !!expireAt && expireAt <= Date.now(), user };
   }
 
-  async function activateVip() {
-    await delay(200, 400);
-
-    // ★ 真实后端：服务端校验后下发到期时间，前端只读
-    if (USE_REMOTE) {
-      const current = Store.getUser() || {};
-      if (!current.loggedIn || current.guest || !getToken()) {
-        return { ok: false, reason: '请先登录后再开通会员' };
-      }
-      const res = await apiFetch('/api/pay/vip/activate', { method: 'POST', body: {} });
-      if (!res.ok) return { ok: false, reason: res.error || '开通失败，请稍后再试' };
-      const user = Store.saveUser({
-        ...res.user,
-        guest: false,
-        loggedIn: true,
-        vip: true,
-        vipExpireTime: res.vipExpireTime || null,
-      });
-      return { ok: true, user, vip: true, vipExpireTime: res.vipExpireTime || null };
-    }
-
-    // ★ mock：前端直接置会员，不做真实支付；续费从当前到期时间往后顺延 5 个月。
-    //   真实对接：POST /api/pay/vip/activate，服务端校验支付凭证后下发 vipExpireTime。
-    const user = Store.getUser() || {};
-    // ★ 会员绑定登录账号：游客不能开通会员
-    if (!user.loggedIn || user.guest) {
-      return { ok: false, reason: '请先登录后再开通会员' };
-    }
-    const base = isVipActive(user) && user.vipExpireTime ? user.vipExpireTime : Date.now();
-    const vipExpireTime = addMonths(base, VIP_MONTHS);
-    const next = Store.saveUser({ vip: true, vipExpireTime, vipActivatedAt: Date.now() });
-    return { ok: true, user: next, vip: true, vipExpireTime };
-  }
-
   /* ============================================================
-   * ★ 广告奖励模块（mock）—— 看广告换免费会员天数
+   * ★ 广告奖励模块 —— 会员唯一获取方式（看国际广告换会员天数）
    * ------------------------------------------------------------
    * 职责拆分（方便后续接真实广告 SDK）：
    *   前端 app.js：负责「展示广告 + 倒计时」，播放完成后调用本模块发放。
    *   本模块 extendVipByAdReward()：校验每日上限 → 顺延会员到期时间 → 记录次数。
    *
-   * 真实对接（穿山甲 / 优量汇 / 微信小程序激励视频）：
-   *   1) 前端把 mock 倒计时换成 SDK 的激励视频播放；
-   *   2) 在 SDK 的 onReward 回调里调用 extendVipByAdReward；
+   * 真实对接（国际广告联盟 / 广告适配层，见 js/ads.js）：
+   *   1) 前端把 mock 倒计时换成广告脚本的激励回调；
+   *   2) 在 onReward 回调里调用 extendVipByAdReward；
    *   3) 后端应校验广告回调凭证（adCallbackToken）后再发放，避免被刷。
    * 防刷：每日领取次数上限 VIP_AD_DAILY_LIMIT（真实环境应以服务端计数为准）。
    * ============================================================ */
@@ -1538,7 +1450,6 @@ const MockAPI = (() => {
     try {
       localStorage.removeItem(ACCOUNT_DB_KEY);
       localStorage.removeItem(AD_REWARD_KEY);
-      localStorage.removeItem(WECHAT_ID_KEY);
     } catch (err) {
       /* 存储不可用时忽略 */
     }
@@ -1560,17 +1471,16 @@ const MockAPI = (() => {
     resetProgress,
     logout,
     /* ★ 新增账号接口 */
-    requestSmsCode,
-    loginByPhone,
-    loginByWechat,
+    requestEmailCode,
+    loginByEmail,
+    getPublicConfig,
     syncLocalRecordToUser,
     /* ★ 真实后端：登录态清理与启动对账 */
     logoutSession,
     refreshRemoteState,
     isRemote: () => USE_REMOTE,
-    /* ★ 新增会员接口与推荐算法（mock，后续可整体替换为后端计算） */
+    /* ★ 会员接口与推荐算法 */
     getUserVipStatus,
-    activateVip,
     /* ★ 广告奖励接口（mock，后续替换为真实广告 SDK 回调 + 服务端发放） */
     getAdRewardQuota,
     extendVipByAdReward,

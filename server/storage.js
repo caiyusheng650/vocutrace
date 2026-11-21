@@ -3,7 +3,7 @@
  * ------------------------------------------------------------
  * 约定：
  *   1) 小对象整体读写：data/users.json、data/progress/<uid>.json
- *   2) 只追加的流水：data/records/<uid>.jsonl、vip-orders.jsonl、ad-rewards.jsonl
+ *   2) 只追加的流水：data/records/<uid>.jsonl、ad-rewards.jsonl
  *   3) 所有写操作走同一文件队列 + 先写 .tmp 再 rename（原子写）
  *   4) 启动时给 data/ 做一份当日快照，出问题可回滚
  *
@@ -16,7 +16,6 @@ const DATA_DIR = process.env.CISHUO_DATA_DIR || path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const RECORDS_DIR = path.join(DATA_DIR, 'records');
 const PROGRESS_DIR = path.join(DATA_DIR, 'progress');
-const VIP_ORDERS_FILE = path.join(DATA_DIR, 'vip-orders.jsonl');
 const AD_REWARDS_FILE = path.join(DATA_DIR, 'ad-rewards.jsonl');
 
 function ensureDir(dir) {
@@ -92,12 +91,10 @@ function getUserById(id) {
   return loadUsers()[id] || null;
 }
 
-function findUserByPhone(phone) {
-  return getAllUsers().find((u) => u.phone === phone) || null;
-}
-
-function findUserByOpenId(openid) {
-  return getAllUsers().find((u) => u.openid && u.openid === openid) || null;
+function findUserByEmail(email) {
+  const key = String(email || '').trim().toLowerCase();
+  if (!key) return null;
+  return getAllUsers().find((u) => String(u.email || '').toLowerCase() === key) || null;
 }
 
 /* 写入/更新一个用户：先更新内存再落盘（users.json 体量小） */
@@ -124,7 +121,7 @@ async function deleteUser(uid) {
   }
 
   // 审计流水按 uid 过滤后重写，避免残留可关联到已注销账号的数据
-  for (const file of [VIP_ORDERS_FILE, AD_REWARDS_FILE]) {
+  for (const file of [AD_REWARDS_FILE]) {
     const list = await readJsonl(file);
     const kept = list.filter((x) => x.uid !== uid);
     if (kept.length !== list.length) {
@@ -161,10 +158,6 @@ function saveProgress(uid, progress) {
 }
 
 /* ---------------- 审计流水 ---------------- */
-function appendVipOrder(order) {
-  return appendJsonl(VIP_ORDERS_FILE, order);
-}
-
 function appendAdReward(entry) {
   return appendJsonl(AD_REWARDS_FILE, entry);
 }
@@ -196,15 +189,13 @@ module.exports = {
   ensureDir,
   getAllUsers,
   getUserById,
-  findUserByPhone,
-  findUserByOpenId,
+  findUserByEmail,
   upsertUser,
   deleteUser,
   appendRecord,
   getRecords,
   getProgress,
   saveProgress,
-  appendVipOrder,
   appendAdReward,
   countAdRewardsToday,
   dailySnapshot,

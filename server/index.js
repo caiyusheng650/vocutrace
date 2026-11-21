@@ -3,17 +3,19 @@
  * ------------------------------------------------------------
  * 运行：node server/index.js
  * 环境变量：
- *   CISHUO_PORT      监听端口，默认 8787
- *   CISHUO_DATA_DIR  数据目录，默认 server/data
- *   CISHUO_STRICT_SMS=1  强制校验短信验证码（上线必开）
- *   CISHUO_SECRET    token 签名密钥（不设则自动生成到 data/secret.key）
+ *   CISHUO_PORT          监听端口，默认 8787
+ *   CISHUO_DATA_DIR      数据目录，默认 server/data
+ *   CISHUO_SECRET        token 签名密钥（不设则自动生成到 data/secret.key）
+ *   CISHUO_SMTP_*        邮箱验证码 SMTP 配置（见 server/mailer.js）
+ *   CISHUO_AD_PROVIDER   广告平台标识，默认 applixir
+ *   CISHUO_AD_SCRIPT_URL 广告脚本地址（AppLixir 默认用官方 CDN）
+ *   CISHUO_AD_UNIT_ID    广告位 ID（AppLixir 即 apiKey）
  *
  * 接口清单（与 js/api.js 里的 ★ 注释一一对应）：
- *   POST /api/auth/sms-code         开发验证码（mock 直接回传 code）
- *   POST /api/auth/login-by-phone   手机号登录，新号赠 5 个月会员
- *   POST /api/auth/wechat           微信登录（mock openid）
+ *   GET  /api/config                公开配置（广告位等）
+ *   POST /api/auth/email-code       发送邮箱验证码（未配 SMTP 时回传 code）
+ *   POST /api/auth/login-by-email   邮箱登录，新邮箱自动注册
  *   GET  /api/user/vip              会员状态（服务端时间口径）
- *   POST /api/pay/vip/activate      开通/续费会员（mock 支付成功）
  *   POST /api/vip/reward-by-ad      广告奖励（服务端计数，每日 3 次）
  *   POST /api/user/sync-records     本机记录同步到账号
  *   GET  /api/user/stats            统计（由服务端记录计算）
@@ -25,22 +27,10 @@ const Storage = require('./storage');
 const Auth = require('./auth');
 
 const PORT = Number(process.env.CISHUO_PORT || 8787);
-const VIP_MONTHS = 5;            // 新注册赠送月数（与前端一致）
 const VIP_AD_REWARD_DAYS = 3;    // 单次广告奖励天数
 const VIP_AD_DAILY_LIMIT = 3;    // 每日广告奖励次数上限
 
 const now = () => Date.now();
-
-/* 按自然月顺延，月底溢出自动夹到当月最后一天 */
-function addMonths(ts, months) {
-  const d = new Date(ts);
-  const day = d.getDate();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + months);
-  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  d.setDate(Math.min(day, lastDay));
-  return d.getTime();
-}
 
 /* 会员有效性：服务端只认 vipExpireTime，不认前端传来的任何 vip 标记 */
 function isVipActive(user) {
@@ -52,12 +42,16 @@ function dayKey(ts) {
   return d.toISOString().slice(0, 10);
 }
 
-function uidFromPhone(phone) {
-  return `u_${crypto.createHash('sha256').update(`phone:${phone}`).digest('hex').slice(0, 12)}`;
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
 }
 
-function uidFromOpenId(openid) {
-  return `u_${crypto.createHash('sha256').update(`wx:${openid}`).digest('hex').slice(0, 12)}`;
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function uidFromEmail(email) {
+  return `u_${crypto.createHash('sha256').update(`email:${normalizeEmail(email)}`).digest('hex').slice(0, 12)}`;
 }
 
 /* 返回给前端的用户结构（与 js/api.js 里 Store 的 user 字段对齐） */
@@ -65,15 +59,13 @@ function publicUser(u) {
   return {
     id: u.id,
     username: u.nickname || '同学',
-    phone: u.phone || null,
-    wechat: !!u.openid,
-    wechatOpenId: u.openid || null,
+    email: u.email || null,
     guest: false,
     loggedIn: true,
-    authMode: u.openid ? 'wechat' : 'phone',
+    authMode: 'email',
     vip: isVipActive(u),
     vipExpireTime: u.vipExpireTime || null,
-    vipGrantedAt: u.vipGrantedAt || null,
+    vipLastRewardAt: u.vipLastRewardAt || null,
     onboarded: !!u.onboarded,
     wordbook: u.wordbook || 'zk',
     level: u.level || 'general',
@@ -124,35 +116,39 @@ function requireUser(req) {
 
 /* ---------------- 业务处理 ---------------- */
 
-/* 发送验证码：mock 直接回传 code，真实环境调用短信服务商后删掉 code 字段 */
-function handleSmsCode(body) {
-  const phone = String(body.phone || '').trim();
-  if (!/^1\d{10}$/.test(phone)) return { status: 400, body: { ok: false, error: '请输入 11 位手机号' } };
-  const code = Auth.issueSmsCode(phone);
-  const strict = process.env.CISHUO_STRICT_SMS === '1';
-  // 严格模式下必须真实下发短信，绝不能把验证码回给前端
-  return { status: 200, body: strict ? { ok: true } : { ok: true, mock: true, code } };
+/* 发送邮箱验证码：配置了 SMTP 真实发信，否则回传 code 方便本地调试 */
+async function handleEmailCode(body) {
+  const email = normalizeEmail(body.email);
+  if (!isValidEmail(email)) return { status: 400, body: { ok: false, error: '请输入正确的邮箱地址' } };
+
+  try {
+    const result = await Auth.issueEmailCode(email);
+    return {
+      status: 200,
+      body: result.sent ? { ok: true } : { ok: true, mock: true, code: result.code },
+    };
+  } catch (err) {
+    return { status: 502, body: { ok: false, error: `验证码邮件发送失败：${err.message}` } };
+  }
 }
 
-/* 手机号登录：首次注册赠送 VIP_MONTHS 个月；老账号按已有到期时间判定 */
-async function handlePhoneLogin(body) {
-  const phone = String(body.phone || '').trim();
+/* 邮箱登录：新邮箱自动注册；会员只能通过看广告获得，不赠送 */
+async function handleEmailLogin(body) {
+  const email = normalizeEmail(body.email);
   const code = String(body.code || '').trim();
-  if (!/^1\d{10}$/.test(phone)) return { status: 400, body: { ok: false, error: '请输入 11 位手机号' } };
-  if (!Auth.verifySmsCode(phone, code)) return { status: 400, body: { ok: false, error: '验证码错误或已过期' } };
+  if (!isValidEmail(email)) return { status: 400, body: { ok: false, error: '请输入正确的邮箱地址' } };
+  if (!Auth.verifyEmailCode(email, code)) return { status: 400, body: { ok: false, error: '验证码错误或已过期' } };
 
-  let user = Storage.findUserByPhone(phone);
+  let user = Storage.findUserByEmail(email);
   const isNew = !user;
   if (!user) {
     const ts = now();
     user = {
-      id: uidFromPhone(phone),
-      phone,
-      openid: null,
-      nickname: `用户${phone.slice(-4)}`,
+      id: uidFromEmail(email),
+      email,
+      nickname: email.split('@')[0].slice(0, 12) || '同学',
       createdAt: ts,
-      vipExpireTime: addMonths(ts, VIP_MONTHS),
-      vipGrantedAt: ts,
+      vipExpireTime: null,
       vipLastRewardAt: null,
     };
     await Storage.upsertUser(user);
@@ -168,44 +164,29 @@ async function handlePhoneLogin(body) {
       user: publicUser(user),
       vip: isVipActive(user),
       vipExpireTime: user.vipExpireTime || null,
-      vipGranted: isNew,
     },
   };
 }
 
-/* 微信登录：真实对接时用 code 换 openid；这里用 openid 或 code 派生固定账号 */
-async function handleWechatLogin(body) {
-  const openid = String(body.openid
-    || `wx_mock_${crypto.createHash('sha256').update(String(body.code || 'dev')).digest('hex').slice(0, 10)}`);
-
-  let user = Storage.findUserByOpenId(openid);
-  const isNew = !user;
-  if (!user) {
-    const ts = now();
-    user = {
-      id: uidFromOpenId(openid),
-      phone: null,
-      openid,
-      nickname: `微信用户${openid.slice(-4)}`,
-      createdAt: ts,
-      vipExpireTime: addMonths(ts, VIP_MONTHS),
-      vipGrantedAt: ts,
-      vipLastRewardAt: null,
-    };
-    await Storage.upsertUser(user);
-  }
-
-  const token = Auth.signToken({ uid: user.id });
+/* 公开配置：广告平台 / 广告位 / 奖励规则，前端据此加载广告脚本 */
+function handlePublicConfig() {
+  const provider = process.env.CISHUO_AD_PROVIDER || 'applixir';
+  const isAppLixir = provider.toLowerCase() === 'applixir';
   return {
     status: 200,
     body: {
       ok: true,
-      token,
-      isNew,
-      user: publicUser(user),
-      vip: isVipActive(user),
-      vipExpireTime: user.vipExpireTime || null,
-      vipGranted: isNew,
+      ad: {
+        provider,
+        // AppLixir 官方 SDK；其他联盟请用 CISHUO_AD_SCRIPT_URL 指定
+        scriptUrl: process.env.CISHUO_AD_SCRIPT_URL
+          || (isAppLixir ? 'https://cdn.applixir.com/applixir.app.v6.1.0.js' : ''),
+        // AppLixir 的 apiKey 通过广告位 ID 字段下发
+        adUnitId: process.env.CISHUO_AD_UNIT_ID
+          || (isAppLixir ? '5a4db0c5-0000-4000-8000-5a4db0c50001' : ''),
+        rewardDays: VIP_AD_REWARD_DAYS,
+        dailyLimit: VIP_AD_DAILY_LIMIT,
+      },
     },
   };
 }
@@ -217,17 +198,6 @@ function handleVipInfo(user) {
     status: 200,
     body: { ok: true, vip, expireAt: user.vipExpireTime || null, expired, user: publicUser(user) },
   };
-}
-
-/* 开通/续费：真实环境必须先校验支付回调凭证，再下发 vipExpireTime */
-async function handleActivateVip(user) {
-  const base = isVipActive(user) ? user.vipExpireTime : now();
-  const vipExpireTime = addMonths(base, VIP_MONTHS);
-  const updated = await Storage.upsertUser({ ...user, vipExpireTime, vipActivatedAt: now() });
-  await Storage.appendVipOrder({
-    uid: user.id, type: 'vip', source: 'mock-pay', expireAt: vipExpireTime, ts: now(),
-  });
-  return { status: 200, body: { ok: true, vip: true, vipExpireTime, user: publicUser(updated) } };
 }
 
 /* 广告奖励：每日上限由服务端计数，前端无法自行刷次数 */
@@ -403,18 +373,18 @@ async function handle(req, res) {
     sendJson(res, 200, { ok: true, ts: now() });
     return;
   }
-  if (route === 'POST /api/auth/sms-code') {
-    const result = handleSmsCode(body);
+  if (route === 'GET /api/config') {
+    const result = handlePublicConfig();
     sendJson(res, result.status, result.body);
     return;
   }
-  if (route === 'POST /api/auth/login-by-phone') {
-    const result = await handlePhoneLogin(body);
+  if (route === 'POST /api/auth/email-code') {
+    const result = await handleEmailCode(body);
     sendJson(res, result.status, result.body);
     return;
   }
-  if (route === 'POST /api/auth/wechat') {
-    const result = await handleWechatLogin(body);
+  if (route === 'POST /api/auth/login-by-email') {
+    const result = await handleEmailLogin(body);
     sendJson(res, result.status, result.body);
     return;
   }
@@ -433,11 +403,6 @@ async function handle(req, res) {
   }
   if (route === 'GET /api/user/vip') {
     const result = handleVipInfo(user);
-    sendJson(res, result.status, result.body);
-    return;
-  }
-  if (route === 'POST /api/pay/vip/activate') {
-    const result = await handleActivateVip(user);
     sendJson(res, result.status, result.body);
     return;
   }

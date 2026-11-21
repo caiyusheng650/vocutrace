@@ -1,16 +1,18 @@
 /* ============================================================
- * 鉴权：短信验证码（mock）+ 自签 token（HMAC-SHA256）
+ * 鉴权：邮箱验证码（SMTP 发信）+ 自签 token（HMAC-SHA256）
  * ------------------------------------------------------------
  * 说明：
  *   - token 用 node:crypto 自签，不引第三方 JWT 库；
  *     结构为 base64url(payload).base64url(signature)
- *   - 验证码目前是 mock：CISHUO_STRICT_SMS=1 时才强制校验已下发的验证码。
- *     上线前必须打开严格模式并接入真实短信服务商。
+ *   - 配置了 SMTP 时验证码真实发到邮箱，且必须匹配；
+ *     未配置 SMTP（本地开发）时任意 6 位数字均可通过，
+ *     同时接口会把验证码回传给前端方便调试。
  * ============================================================ */
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { DATA_DIR } = require('./storage');
+const Mailer = require('./mailer');
 
 const SECRET_FILE = path.join(DATA_DIR, 'secret.key');
 
@@ -57,23 +59,33 @@ function verifyToken(token) {
   }
 }
 
-/* ---------------- 验证码（mock，内存 5 分钟有效） ---------------- */
-const smsCodes = new Map();
+/* ---------------- 邮箱验证码（内存 5 分钟有效） ---------------- */
+const emailCodes = new Map();
 
-function issueSmsCode(phone) {
+/* 生成验证码并尝试发信；返回是否真实发出 */
+async function issueEmailCode(email) {
+  const key = String(email).trim().toLowerCase();
   const code = String(crypto.randomInt(100000, 1000000));
-  smsCodes.set(phone, { code, expireAt: Date.now() + 5 * 60 * 1000 });
-  // 真实对接：这里调用短信服务商 API，把 code 发到手机上
-  return code;
+  emailCodes.set(key, { code, expireAt: Date.now() + 5 * 60 * 1000 });
+
+  if (!Mailer.isConfigured()) return { code, sent: false };
+  try {
+    await Mailer.sendLoginCode(key, code);
+    return { code, sent: true };
+  } catch (err) {
+    emailCodes.delete(key);
+    throw err;
+  }
 }
 
-function verifySmsCode(phone, code) {
-  const strict = process.env.CISHUO_STRICT_SMS === '1';
-  if (!strict) return /^\d{6}$/.test(String(code || '')); // mock：任意 6 位数字
-  const entry = smsCodes.get(phone);
+function verifyEmailCode(email, code) {
+  const key = String(email).trim().toLowerCase();
+  // 未配置 SMTP：本地开发模式，任意 6 位数字通过
+  if (!Mailer.isConfigured()) return /^\d{6}$/.test(String(code || ''));
+  const entry = emailCodes.get(key);
   if (!entry || entry.expireAt <= Date.now() || entry.code !== String(code)) return false;
-  smsCodes.delete(phone);
+  emailCodes.delete(key);
   return true;
 }
 
-module.exports = { signToken, verifyToken, issueSmsCode, verifySmsCode };
+module.exports = { signToken, verifyToken, issueEmailCode, verifyEmailCode };

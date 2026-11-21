@@ -342,6 +342,8 @@ const Memory = (() => {
 
   /* ---------------- 渲染：我的页面 ---------------- */
   function renderMe() {
+    // ★ 记忆分层与薄弱雷达已移至「我的」页，复用同一套渲染
+    renderHome();
     const bookId = currentBookId();
 
     const tagBox = document.getElementById('memory-tags');
