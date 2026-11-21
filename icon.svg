@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#158a7c"/>
+  <circle cx="392" cy="112" r="96" fill="#22ab98" opacity="0.55"/>
+  <circle cx="96" cy="416" r="72" fill="#45c6b2" opacity="0.35"/>
+  <text x="256" y="322" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif"
+        font-size="220" font-weight="600" fill="#ffffff">词</text>
+</svg>
