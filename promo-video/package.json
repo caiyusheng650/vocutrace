@@ -1,0 +1,23 @@
+{
+  "name": "vocutrace-promo-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "词溯（Vocutrace）产品介绍视频 · TRAE 好应用大赏赛",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render VocutracePromo out/vocutrace-promo.mp4",
+    "still": "remotion still VocutracePromo",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.545",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.545"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.8.2"
+  }
+}

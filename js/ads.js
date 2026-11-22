@@ -17,16 +17,21 @@ const Ads = (() => {
   const APPLIXIR_SDK = 'https://cdn.applixir.com/applixir.app.v6.1.0.js';
   const AD_SLOT_ID = 'ad-slot';
 
-  /* ★ 硬编码广告配置：前端直接使用，不依赖后端 /api/config
-   * 注意：纯静态部署时 MockAPI.getPublicConfig() 只会返回 mock，
-   * 因此这里把 AppLixir 广告位写死，线上才能真实展示激励视频。 */
+  /* ★ 硬编码广告配置：使用 B 站公开视频作为激励视频，前端直接播放。
+   * 不依赖任何广告联盟 SDK，也不会出现联盟报错（如 [object Object]）。
+   * 服务端 /api/config 只用于奖励天数与每日次数，不再覆盖播放源。 */
+  const BILIBILI_VIDEO =
+    'https://player.bilibili.com/player.html?isOutside=true'
+    + '&aid=116933202545130&bvid=BV1syKE62E6A&cid=40026702878&p=1&autoplay=1';
+
   const DEFAULT_CONFIG = {
-    provider: 'applixir',
+    provider: 'bilibili',
     scriptUrl: '',
-    adUnitId: '5a4db0c5-0000-4000-8000-5a4db0c50001',
+    adUnitId: '',
     rewardDays: 3,
     dailyLimit: 3,
-    rewardSeconds: 5,
+    rewardSeconds: 7,   // 只播放视频前 7 秒
+    videoUrl: BILIBILI_VIDEO,
   };
 
   let config = { ...DEFAULT_CONFIG };
@@ -55,15 +60,16 @@ const Ads = (() => {
     initPromise = (async () => {
       try {
         const fromServer = await MockAPI.getPublicConfig();
-        // ★ 只有服务端明确下发了非 mock 的广告平台时才覆盖硬编码配置
-        if (fromServer && fromServer.provider && String(fromServer.provider).toLowerCase() !== 'mock') {
-          config = { ...DEFAULT_CONFIG, ...fromServer };
+        // ★ 播放源固定为 B 站视频，服务端只影响奖励规则，不再切换 provider
+        if (fromServer) {
+          if (Number(fromServer.rewardDays) > 0) config.rewardDays = Number(fromServer.rewardDays);
+          if (Number(fromServer.dailyLimit) > 0) config.dailyLimit = Number(fromServer.dailyLimit);
         }
       } catch (err) {
-        config = { ...DEFAULT_CONFIG };
+        /* 配置拉取失败不影响本地视频广告 */
       }
-      config.provider = String(config.provider || 'mock').toLowerCase();
-      console.info('[词溯广告] provider =', config.provider, '| adUnitId =', config.adUnitId || '(空)');
+      config.provider = 'bilibili';
+      console.info('[词溯广告] provider = bilibili | 时长 =', config.rewardSeconds, 's');
 
       if (config.provider === 'applixir' && !config.scriptUrl) {
         config.scriptUrl = APPLIXIR_SDK;
@@ -81,10 +87,22 @@ const Ads = (() => {
     return initPromise;
   }
 
-  function stop() {
+  /* 只清计时器：playMock 每次启动前调用，不能清掉刚插入的视频 */
+  function clearTimer() {
     if (activeTimer) {
       clearInterval(activeTimer);
       activeTimer = null;
+    }
+  }
+
+  function stop() {
+    clearTimer();
+    // 移除 B 站 iframe，关闭弹层或播放结束后立即停止视频与声音
+    const slot = document.getElementById(AD_SLOT_ID);
+    if (slot) {
+      slot.innerHTML = '';
+      slot.classList.add('hidden');
+      slot.classList.remove('flex');
     }
   }
 
@@ -92,7 +110,7 @@ const Ads = (() => {
   function playMock(onProgress, onReward) {
     let left = Number(config.rewardSeconds) || DEFAULT_CONFIG.rewardSeconds;
     if (onProgress) onProgress(left);
-    stop();
+    clearTimer();
     activeTimer = setInterval(() => {
       left -= 1;
       if (left > 0) {
@@ -103,6 +121,28 @@ const Ads = (() => {
       if (onProgress) onProgress(0);
       if (onReward) onReward();
     }, 1000);
+  }
+
+  /* B 站视频广告：内嵌播放器，pointer-events 禁用保证无法点击/拖动/暂停。
+   * 只计时前 7 秒，无论视频是否成功自动播放，到时都正常发放奖励，
+   * 因此断网、B 站加载失败也不会卡死流程。 */
+  function playBilibili(onProgress, onReward) {
+    const slot = document.getElementById(AD_SLOT_ID);
+    if (slot) {
+      slot.classList.remove('hidden');
+      slot.classList.add('flex');
+      slot.innerHTML = '';
+      const frame = document.createElement('iframe');
+      frame.src = config.videoUrl;
+      frame.setAttribute('scrolling', 'no');
+      frame.setAttribute('frameborder', 'no');
+      frame.setAttribute('framespacing', '0');
+      frame.setAttribute('allowfullscreen', 'false');
+      // 关键：iframe 不接收任何鼠标/触摸事件，B 站播放器内部按钮全部点不动
+      frame.style.cssText = 'width:100%;height:100%;border:0;pointer-events:none;';
+      slot.appendChild(frame);
+    }
+    playMock(onProgress, onReward);
   }
 
   /* AppLixir v6：initializeAndOpenPlayer + adStatusCallbackFn */
@@ -151,6 +191,11 @@ const Ads = (() => {
   /* 播放激励广告：onReward 只在广告完成后触发 */
   async function play({ onProgress, onReward, onError } = {}) {
     await init();
+
+    if (config.provider === 'bilibili') {
+      playBilibili(onProgress, onReward);
+      return;
+    }
 
     if (config.provider === 'mock') {
       playMock(onProgress, onReward);
